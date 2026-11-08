@@ -8,8 +8,8 @@
 <meta name="description" content="El juego de fotos más gracioso: hasta 8 fotógrafos compiten por cazar la mejor foto de Jorge. ¡Entra y juega!">
 <meta property="og:title" content="PAPARAZZI 📸 ¿Quién saca la mejor foto?">
 <meta property="og:description" content="Hasta 8 jugadores compitiendo por cazar la foto perfecta. ¡Únete a la partida!">
-<meta property="og:image" content="https://puntofibra.github.io/selfie/compartir.jpg">
-<meta property="og:url" content="https://puntofibra.github.io/selfie/">
+<meta property="og:image" content="https://puntofibra.github.io/paparazzi/compartir.jpg">
+<meta property="og:url" content="https://puntofibra.github.io/paparazzi/">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#14051f">
@@ -333,7 +333,7 @@ input{font-family:inherit}
    ========================================================= */
 const VERSION = '2026-11-08.1';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
-const APP_URL = 'https://puntofibra.github.io/selfie/';
+const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
 const LS = { get(k, d){ try{ const v = localStorage.getItem('pz_' + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }, set(k, v){ try{ localStorage.setItem('pz_' + k, JSON.stringify(v)); }catch(e){} } };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
