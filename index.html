@@ -102,8 +102,17 @@ input{font-family:inherit}
 .vfo .br{position:absolute;width:28px;height:28px;border:3px solid rgba(255,255,255,.85)}
 .vfo .br.a{top:12px;left:12px;border-right:0;border-bottom:0}.vfo .br.b{top:12px;right:12px;border-left:0;border-bottom:0}
 .vfo .br.c{bottom:12px;left:12px;border-right:0;border-top:0}.vfo .br.d{bottom:12px;right:12px;border-left:0;border-top:0}
-.vfo .focus{position:absolute;left:50%;top:45%;width:70px;height:70px;margin:-35px 0 0 -35px;border:2px solid var(--yellow);border-radius:6px;transition:transform .2s,border-color .2s}
+.vfo .focus{position:absolute;left:50%;top:45%;width:70px;height:70px;margin:-35px 0 0 -35px;pointer-events:none;border:2px solid var(--yellow);border-radius:6px;transition:transform .2s,border-color .2s}
 .vfo .focus.ok{border-color:var(--green);transform:scale(.85)}
+.vfo .focus.tap{animation:fTap .35s ease-out}
+@keyframes fTap{from{transform:scale(1.8);opacity:.3}}
+.vfo .warn{position:absolute;left:0;right:0;top:44px;text-align:center;font:900 13px Rubik;letter-spacing:1px;color:#ffd60a;text-shadow:0 1px 4px #000,0 0 12px rgba(0,0,0,.8);animation:blink 1s infinite}
+#expo{position:absolute;right:8px;top:18%;height:58%;width:44px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:2;touch-action:none}
+#expo b{font-size:18px;filter:drop-shadow(0 1px 2px #000)}
+#expo .tr{flex:1;width:8px;border-radius:9px;background:linear-gradient(180deg,#fff6b0,#ffb300 50%,#1b1240);position:relative;box-shadow:0 0 0 2px rgba(0,0,0,.5)}
+#expo .tr i{position:absolute;left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;background:#fff;border:3px solid #ffd60a;box-shadow:0 0 12px rgba(255,214,10,.8)}
+#expo span{font:900 9px Rubik;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap}
+#count span small{display:block;font-family:Rubik;font-size:13px;font-weight:700;letter-spacing:0;color:#e6d6ff;margin-top:12px;line-height:1.6}
 .vfo .rec{position:absolute;top:16px;left:50%;transform:translateX(-50%);font:900 12px Rubik;letter-spacing:2px;display:flex;align-items:center;gap:6px;text-shadow:0 1px 3px #000}
 .vfo .rec i{width:10px;height:10px;border-radius:50%;background:#ff3b3b;animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.2}}
@@ -111,7 +120,7 @@ input{font-family:inherit}
 #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 #flash.go{animation:flashA .45s ease-out}
 @keyframes flashA{0%{opacity:1}100%{opacity:0}}
-#count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(7,2,12,.55);backdrop-filter:blur(3px);font-family:Bungee;text-align:center}
+#count{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(7,2,12,.55);backdrop-filter:blur(3px);font-family:Bungee;text-align:center}
 #count b{font-size:110px;color:var(--yellow);text-shadow:0 0 40px rgba(255,214,10,.7);animation:cnt 1s ease-out infinite}
 #count span{font-size:16px;letter-spacing:2px;color:#fff;margin-top:6px;padding:0 20px}
 @keyframes cnt{from{transform:scale(1.6);opacity:0}30%{transform:scale(1);opacity:1}}
@@ -255,8 +264,9 @@ input{font-family:inherit}
   <div class="pTop"><div class="rnd" id="plRound">1/5</div><div class="enc" id="plEnc"><small>ENCARGO DE LA REVISTA</small><span></span></div>
     <div id="timer"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5"/><circle id="tmArc" cx="26" cy="26" r="22" fill="none" stroke="#ffd60a" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="0"/></svg><b id="tmTxt">15</b></div></div>
   <div id="vfWrap"><canvas id="vf"></canvas>
-    <div class="vfo"><div class="grid"></div><div class="br a"></div><div class="br b"></div><div class="br c"></div><div class="br d"></div><div class="focus" id="focusBox"></div>
+    <div class="vfo"><div class="grid"></div><div class="br a"></div><div class="br b"></div><div class="br c"></div><div class="br d"></div><div class="focus" id="focusBox"></div><div class="warn" id="vfWarn"></div>
       <div class="rec"><i></i>REC · <span id="plScene"></span></div><div class="info" id="vfInfo">ISO 800 · f/1.8 · 1/250</div></div>
+    <div id="expo"><b>☀️</b><div class="tr"><i id="expoThumb"></i></div><b>🌑</b><span id="expoVal">+0.0 EV</span></div>
     <div id="flash"></div>
     <div id="count"><b id="cntN">3</b><span id="cntTxt"></span></div>
   </div>
@@ -316,7 +326,8 @@ input{font-family:inherit}
   <div class="card help">
     <p>📸 Sois <b>paparazzis</b> y vuestro objetivo es cazar <b>la mejor foto de Jorge</b>.</p>
     <p>🎥 La cámara se mueve, hace zoom y se desenfoca sola. Jorge no para de cambiar de pose… y de repente aparecen <b>abuelas, niños, palomas y coches</b> que te estropean la foto.</p>
-    <p>🎯 Tienes <b>3 disparos</b> por ronda. Busca el momento exacto: Jorge bien encuadrado, enfocado y sin nadie delante.</p>
+    <p>🎯 Tienes <b>3 disparos</b> por ronda. Tú controlas la cámara: <b>arrastra</b> para encuadrar, <b>pellizca</b> para zoom, <b>toca a Jorge</b> para enfocar y <b>ajusta la luz</b> con la barra ☀️ de la derecha.</p>
+    <p>✨ Cuidado con los <b>destellos del sol</b>: reencuadra para que no tapen a Jorge.</p>
     <p>📰 Cada ronda la revista hace un <b>encargo</b> (por ejemplo, "Jorge de espaldas"). Si lo cumples, <b>+25 puntos</b>.</p>
     <p>⭐ Después todos votáis las fotos de los demás <b>sin saber de quién son</b>. El <b>fotómetro</b> también puntúa el enfoque y el encuadre.</p>
     <p>🏆 Al final de todas las rondas gana el <b>mejor paparazzi</b>.</p>
@@ -331,7 +342,7 @@ input{font-family:inherit}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-08.1';
+const VERSION = '2026-11-08.3';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -389,7 +400,7 @@ const ESCENAS = [
   { n: 'Ibiza', th: 'beach', sky: ['#ff5e62', '#ffc371'], gr: '#f3d2a2', sunset: 1 }
 ];
 // números de los fondos e intrusos que ya tienen imagen subida
-const FONDOS_OK = [], INTRUSOS_OK = [], LOGO_OK = false;
+const FONDOS_OK = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], INTRUSOS_OK = [], LOGO_OK = false;
 ESCENAS.forEach((e, i) => e.f = FONDOS_OK.includes(i + 1) ? 'fondos/' + String(i + 1).padStart(2, '0') + '.jpg' : '');
 
 /* ---------- intrusos (PNG en intrusos/NN.png; mientras tanto, emoji) ---------- */
@@ -550,11 +561,17 @@ function plan(R){
   for (let k = 0; k < Math.round(dur / 3.2 * diff); k++) ev.push({ k: 'blur', a: r() * dur, d: .6 + r() * 1.1, s: 5 + r() * 6 });
   for (let k = 0; k < Math.round(dur / 4.5 * diff); k++) ev.push({ k: 'whip', a: r() * dur, d: .45 + r() * .3, dx: (r() < .5 ? -1 : 1) * (380 + r() * 380), dy: (r() - .5) * 200 });
   for (let k = 0; k < 1 + Math.floor(r() * 2); k++) ev.push({ k: 'flash', a: 1 + r() * (dur - 2), d: .35 });
-  const P = { enc, seg, intr, ev, diff, f: Array.from({ length: 8 }, () => .4 + r() * 1.2), ph: Array.from({ length: 8 }, () => r() * 6.28) };
+  // destellos de sol (posición en el mundo; hay que encuadrar para evitarlos)
+  const sun = [];
+  for (let k = 0; k < 2 + Math.round(dur / 8 * diff); k++){ const a = r() * (dur - 2), d = 2.5 + r() * 3.5, x0 = 200 + r() * 1200; sun.push({ a, b: a + d, x0, x1: x0 + (r() - .5) * 700, y: 120 + r() * 380, s: .75 + r() * .25 }); }
+  const fA = .15 + r() * .2, fB = r() * 6.28, fC = .5 + r() * .4, fD = r() * 6.28, eA = .25 + r() * .35, eB = r() * 6.28, eC = .9 + r() * .7, eD = r() * 6.28;
+  const P = { enc, seg, intr, ev, diff, sun,
+    fd: t => .5 + .33 * Math.sin(t * fA * diff + fB) + .1 * Math.sin(t * fC + fD),
+    ex: t => clamp(.6 * Math.sin(t * eA * diff + eB) + .25 * Math.sin(t * eC + eD), -1, 1), f: Array.from({ length: 8 }, () => .4 + r() * 1.2), ph: Array.from({ length: 8 }, () => r() * 6.28) };
   PLANS[key] = P; return P;
 }
 // estado de la escena en el instante t (segundos)
-function sceneAt(R, t){
+function sceneAt(R, t, cam){
   const P = plan(R), f = P.f, ph = P.ph, d = P.diff;
   const sg = P.seg.find(s => t >= s.a && t < s.b) || P.seg[P.seg.length - 1];
   const pose = sg.p, im = poseImg(pose);
@@ -570,8 +587,8 @@ function sceneAt(R, t){
   const J = { x: jx - jw / 2, y: jy, w: jw, h: jh };
   // cámara: zoom, paneo con retraso, golpes de paneo, temblor
   let z = 1.45 + .65 * Math.sin(t * .55 * f[2] * d + ph[3]) + .25 * Math.sin(t * 1.7 * f[3] + ph[4]);
-  z = clamp(z, 1.0, 2.6);
-  let cx = jx + 150 * Math.sin(t * .8 * f[4] * d + ph[5]) + 75 * Math.sin(t * 2.1 * f[5] + ph[6]);
+  z = clamp(z * (cam ? cam.zm : 1), .9, 3.2);
+  let cx = jx + 150 * Math.sin(t * .8 * f[4] * d + ph[5]) + 75 * Math.sin(t * 2.1 * f[5] + ph[6]) + 280 * Math.sin(t * .23 * d + ph[1] * 2);
   let cy = GROUND - 330 + 110 * Math.sin(t * .7 * f[6] + ph[7]);
   let blur = 0, flash = 0;
   P.ev.forEach(e => {
@@ -582,6 +599,11 @@ function sceneAt(R, t){
     else if (e.k === 'flash') flash = Math.max(flash, 1 - u);
   });
   const sh = 6 * d; cx += Math.sin(t * 23) * sh; cy += Math.cos(t * 19) * sh;
+  if (cam){ cx += cam.dx; cy += cam.dy; }
+  // enfoque y exposición que controla el fotógrafo
+  const fe = cam ? Math.abs(P.fd(t) - cam.pf) : 0, ee = cam ? P.ex(t) + cam.pe : 0;
+  blur += clamp(fe * 11 - .4, 0, 9);
+  const G = P.sun.filter(o => t >= o.a && t <= o.b).map(o => { const u = (t - o.a) / (o.b - o.a); return { x: lerp(o.x0, o.x1, u), y: o.y, s: o.s * Math.sin(u * Math.PI) }; });
   const vh = WH / z, vw = vh * .75;
   cx = clamp(cx, vw / 2, WW - vw / 2); cy = clamp(cy, vh / 2, WH - vh / 2);
   const V = { x: cx - vw / 2, y: cy - vh / 2, w: vw, h: vh };
@@ -597,12 +619,12 @@ function sceneAt(R, t){
     const y = I0.air ? 120 + o.yo * 260 + Math.sin(t * 6 + o.ph) * 30 : WH + 30 - h + Math.abs(Math.sin(t * 9 + o.ph)) * -14;
     I.push({ I: I0, x, y, w, h, dir: o.dir, img });
   });
-  return { t, pose, J, V, z, blur, flash, I, esc: R.esc };
+  return { t, pose, J, V, z, blur, flash, I, esc: R.esc, fe, ee, G };
 }
 const inter = (a, b) => { const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y); return w > 0 && h > 0 ? w * h : 0; };
 // fotómetro: puntúa la foto de 0 a 100
-function quality(R, t){
-  const S = sceneAt(R, t), J = S.J, V = S.V;
+function quality(R, t, cam){
+  const S = sceneAt(R, t, cam), J = S.J, V = S.V;
   const area = J.w * J.h, fv = inter(J, V) / area;
   const head = { x: J.x + J.w * .2, y: J.y, w: J.w * .6, h: J.h * .24 };
   const headVis = inter(head, V) / (head.w * head.h) > .8;
@@ -613,9 +635,13 @@ function quality(R, t){
   S.I.forEach(o => { const box = { x: o.x + o.w * .12, y: o.y + o.h * .08, w: o.w * .76, h: o.h * .86 }; const a = inter(box, J) / area, ah = inter(box, head) / (head.w * head.h); const v = Math.max(a, ah * .9); if (v > occ){ occ = v; worst = o.I; } if (inter(box, V) > box.w * box.h * .3) intrIn = true; });
   occ = clamp(occ, 0, 1);
   const centro = 1 - clamp(dc / .6, 0, 1), tam = 1 - clamp(Math.abs(sr - .85) / .8, 0, 1), nit = 1 - clamp(S.blur / 6, 0, 1), exp = 1 - S.flash * .8;
-  let q = 100 * Math.pow(fv, 1.2) * (headVis ? 1 : .35) * (.35 + .65 * nit) * (.55 + .45 * centro) * (.65 + .35 * tam) * (1 - .85 * occ) * S.pose.g * exp;
+  let glare = 0;
+  S.G.forEach(g => { const gx = (g.x - V.x) / V.w, gy = (g.y - V.y) / V.h; if (gx < -.3 || gx > 1.3 || gy < -.3 || gy > 1.3) return; const jx = (jc.x - V.x) / V.w, jy = (jc.y - V.y) / V.h; const dd = Math.hypot(gx - jx, (gy - jy) * .75); glare = Math.max(glare, g.s * clamp(1.15 - dd / .55, 0, 1)); });
+  glare = clamp(glare, 0, 1);
+  const expo = 1 - clamp(Math.abs(S.ee) * 1.15 - .08, 0, .92);
+  let q = 100 * expo * (1 - .8 * glare) * Math.pow(fv, 1.2) * (headVis ? 1 : .35) * (.35 + .65 * nit) * (.55 + .45 * centro) * (.65 + .35 * tam) * (1 - .85 * occ) * S.pose.g * exp;
   q = Math.round(clamp(q * 1.12, 0, 100));
-  const st = { q, fv, headVis, dc, sr, occ, intrIn, blur: S.blur, flash: S.flash, pose: S.pose, worst };
+  const st = { q, fv, headVis, dc, sr, occ, intrIn, blur: S.blur, flash: S.flash, pose: S.pose, worst, glare, ee: S.ee };
   const P = plan(R);
   st.enc = !!P.enc.ok(st);
   st.cap = caption(st);
@@ -625,6 +651,9 @@ function caption(s){
   if (s.fv < .15) return '🔍 ¿Dónde está ' + PJ.n + '?';
   if (s.occ > .45 && s.worst) return s.worst.e + ' ' + s.worst.cap;
   if (s.flash > .5) return '⚡ Quemada por el flash';
+  if (s.ee > .55) return '☀️ Foto quemada, ¡qué luz!';
+  if (s.ee < -.55) return '🌑 Demasiado oscura';
+  if (s.glare > .5) return '✨ El destello del sol lo ha arruinado';
   if (s.blur > 4) return '😵 Movida total';
   if (!s.headVis) return '✂️ ' + PJ.n + ' sin cabeza';
   if (s.pose.k === 'espalda') return '🙈 ' + PJ.n + ' de espaldas';
@@ -658,11 +687,32 @@ function drawScene(x, w, h, S){
     x.restore();
   });
   x.restore();
+  // destellos del sol (lens flare)
+  S.G.forEach(g => {
+    if (g.s <= .02) return;
+    const gx = (g.x - V.x) * k, gy = (g.y - V.y) * k, cx = w / 2, cy = h / 2;
+    if (gx < -w * .4 || gx > w * 1.4 || gy < -h * .4 || gy > h * 1.4) return;
+    x.save(); x.globalCompositeOperation = 'lighter';
+    let gr = x.createRadialGradient(gx, gy, 0, gx, gy, w * .55 * g.s);
+    gr.addColorStop(0, 'rgba(255,255,240,' + .95 * g.s + ')'); gr.addColorStop(.18, 'rgba(255,230,150,' + .6 * g.s + ')'); gr.addColorStop(1, 'rgba(255,180,80,0)');
+    x.fillStyle = gr; x.fillRect(0, 0, w, h);
+    x.strokeStyle = 'rgba(255,255,230,' + .5 * g.s + ')'; x.lineWidth = Math.max(2, w * .006);
+    for (let r = 0; r < 6; r++){ const a = r * Math.PI / 6 + S.t * .3; x.beginPath(); x.moveTo(gx - Math.cos(a) * w * .5 * g.s, gy - Math.sin(a) * w * .5 * g.s); x.lineTo(gx + Math.cos(a) * w * .5 * g.s, gy + Math.sin(a) * w * .5 * g.s); x.stroke(); }
+    [[.35, .07, '120,200,255'], [.7, .045, '255,120,220'], [1.15, .1, '140,255,180'], [1.5, .06, '255,220,120']].forEach(([f, rr, c]) => {
+      const px = gx + (cx - gx) * f * 2, py = gy + (cy - gy) * f * 2;
+      const g2 = x.createRadialGradient(px, py, 0, px, py, w * rr); g2.addColorStop(0, 'rgba(' + c + ',' + .45 * g.s + ')'); g2.addColorStop(.7, 'rgba(' + c + ',' + .18 * g.s + ')'); g2.addColorStop(1, 'rgba(' + c + ',0)');
+      x.fillStyle = g2; x.beginPath(); x.arc(px, py, w * rr, 0, 7); x.fill();
+    });
+    x.restore();
+  });
+  // exposición
+  if (S.ee > .05){ x.fillStyle = 'rgba(255,252,240,' + Math.min(.88, S.ee * .85) + ')'; x.fillRect(0, 0, w, h); }
+  else if (S.ee < -.05){ x.fillStyle = 'rgba(5,3,15,' + Math.min(.9, -S.ee * .88) + ')'; x.fillRect(0, 0, w, h); }
   if (S.flash > 0){ x.fillStyle = 'rgba(255,255,255,' + (S.flash * .85) + ')'; x.fillRect(0, 0, w, h); }
 }
-function renderFrame(cv, R, t){
+function renderFrame(cv, R, t, cam){
   const x = cv.getContext('2d'), w = cv.width, h = cv.height;
-  const S = sceneAt(R, t);
+  const S = sceneAt(R, t, cam);
   if (S.blur > .6){
     const f = 1 / (1 + S.blur * .55);
     blurCv.width = Math.max(8, Math.round(w * f)); blurCv.height = Math.max(8, Math.round(h * f));
@@ -673,9 +723,9 @@ function renderFrame(cv, R, t){
   return S;
 }
 // foto en un canvas nuevo (para polaroids)
-function photoCanvas(R, t, w){
+function photoCanvas(R, t, w, cam){
   const c = document.createElement('canvas'); c.width = w || 360; c.height = Math.round((w || 360) * 4 / 3);
-  renderFrame(c, R, t / 1000);
+  renderFrame(c, R, t / 1000, cam);
   return c;
 }
 
@@ -876,7 +926,8 @@ async function invitar(){
 function empezar(){
   initAudio(); SFX.go();
   // escenarios en orden aleatorio
-  const order = ESCENAS.map((_, i) => i).sort(() => Math.random() - .5);
+  const conImg = ESCENAS.map((e, i) => e.f ? i : -1).filter(i => i >= 0);
+  const order = (conImg.length ? conImg : ESCENAS.map((_, i) => i)).sort(() => Math.random() - .5);
   accion('empezar', { esc: order });
 }
 
@@ -894,11 +945,11 @@ function screenCapture(prev){
   if (capRound !== ST.ronda){
     // nueva ronda
     capRound = ST.ronda; capR = R_of(ST.ronda); myShots = []; pickedIdx = -1; sentPhoto = 0; sentVotes = 0; VOTE = { e: {}, r: {} }; resShown = 0;
-    $('tray').innerHTML = ''; $('shots').querySelectorAll('i').forEach(i => i.classList.remove('used'));
+    camReset(); $('tray').innerHTML = ''; $('shots').querySelectorAll('i').forEach(i => i.classList.remove('used'));
     $('plRound').textContent = ST.ronda + '/' + ST.cfg.rondas;
     $('plEnc').querySelector('span').textContent = encTxt(plan(capR).enc);
     $('plScene').textContent = ESCENAS[capR.esc % ESCENAS.length].n.toUpperCase();
-    $('cntTxt').textContent = '📰 ' + encTxt(plan(capR).enc);
+    $('cntTxt').innerHTML = '📰 ' + esc(encTxt(plan(capR).enc)) + '<small>👆 Arrastra para encuadrar · 🤏 pellizca para zoom<br>🎯 Toca a ' + esc(PJ.n) + ' para enfocar · ☀️ Ajusta la luz a la derecha<br>✨ ¡Evita los destellos del sol!</small>';
     lastScreen = '';
   }
   const t = now();
@@ -922,18 +973,18 @@ function startCapture(){
     if (el < 0){
       cnt.style.display = 'flex'; const n = Math.ceil(-el); $('cntN').textContent = n;
       if (n !== lastTick){ lastTick = n; if (n <= 3) SFX.tick(); }
-      renderFrame($('vf'), capR, 0); $('shutter').disabled = true; return;
+      renderFrame($('vf'), capR, 0, CAM); $('shutter').disabled = true; return;
     }
     if (cnt.style.display !== 'none'){ cnt.style.display = 'none'; SFX.go(); $('shutter').disabled = false; }
     const tt = Math.min(el, dur);
-    const S = renderFrame($('vf'), capR, tt);
+    camStep(); const S = renderFrame($('vf'), capR, tt, CAM); lastS = S;
     const left = Math.max(0, dur - el);
     $('tmTxt').textContent = Math.ceil(left);
     $('tmArc').style.strokeDashoffset = 138.2 * (1 - left / dur);
     $('tmArc').style.stroke = left < 4 ? '#ff5252' : '#ffd60a';
     if (left < 4 && Math.ceil(left) !== lastTick){ lastTick = Math.ceil(left); SFX.tick(); }
-    $('focusBox').classList.toggle('ok', S.blur < 1);
-    $('vfInfo').textContent = 'ISO ' + (400 + Math.round(S.z * 300)) + ' · ' + S.z.toFixed(1) + 'x · ' + (S.blur < 1 ? 'ENFOCADO ✓' : 'ENFOCANDO…');
+    $('focusBox').classList.toggle('ok', S.fe < .08); $('vfWarn').textContent = S.G.some(g => g.s > .35) ? '✨ ¡DESTELLO! REENCUADRA' : S.ee > .45 ? '☀️ DEMASIADA LUZ · BAJA LA EXPOSICIÓN' : S.ee < -.45 ? '🌑 FALTA LUZ · SUBE LA EXPOSICIÓN' : S.fe > .15 ? '🎯 TOCA A ' + PJ.n.toUpperCase() + ' PARA ENFOCAR' : '';
+    $('vfInfo').textContent = 'ISO ' + (400 + Math.round(S.z * 300)) + ' · ' + S.z.toFixed(1) + 'x · ' + (S.fe < .08 ? 'ENFOCADO ✓' : 'DESENFOCADO');
     if (S.I.length){ S.I.forEach(o => { if (!o.I._last || t - o.I._last > 1500){ o.I._last = t; if (o.I.n === 'coche') SFX.honk(); else if (o.I.air) SFX.wind(); } }); }
     if (el >= dur){ stopCapture(); $('shutter').disabled = true; setTimeout(() => { if (ST && ST.fase === 'captura' && capRound === ST.ronda) openPick(); }, 500); }
   };
@@ -947,14 +998,65 @@ function shoot(){
   SFX.shutter();
   $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
   try{ navigator.vibrate && navigator.vibrate(30); }catch(e){}
-  const q = quality(capR, tms / 1000);
-  myShots.push({ t: tms, q });
+  const cam = camCopy(), q = quality(capR, tms / 1000, cam);
+  myShots.push({ t: tms, q, cam });
   $('shots').querySelectorAll('i')[myShots.length - 1].classList.add('used');
-  const th = photoCanvas(capR, tms, 84); $('tray').appendChild(th);
+  const th = photoCanvas(capR, tms, 84, cam); $('tray').appendChild(th);
   if (myShots.length >= 3) $('shutter').disabled = true;
 }
 $('shutter').addEventListener('pointerdown', e => { e.preventDefault(); shoot(); });
-$('vfWrap').addEventListener('pointerdown', e => { e.preventDefault(); shoot(); });
+
+/* ---------- controles táctiles de la cámara ---------- */
+let CAM = { dx: 0, dy: 0, zm: 1, pf: .5, pe: 0 }, pfTarget = .5, lastS = null;
+function camReset(){ CAM = { dx: 0, dy: 0, zm: 1, pf: .2, pe: 0 }; pfTarget = .2; paintExpo(); }
+const camCopy = () => ({ dx: Math.round(CAM.dx), dy: Math.round(CAM.dy), zm: Math.round(CAM.zm * 100) / 100, pf: Math.round(CAM.pf * 1000) / 1000, pe: Math.round(CAM.pe * 100) / 100 });
+function camStep(){ CAM.pf += (pfTarget - CAM.pf) * .25; }
+const ptrs = new Map(); let gest = null;
+function vfLocal(e){ const r = $('vfWrap').getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; }
+$('vfWrap').addEventListener('pointerdown', e => {
+  if (e.target.closest('#expo')) return;
+  e.preventDefault(); $('vfWrap').setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, vfLocal(e));
+  if (ptrs.size === 1){ const p = vfLocal(e); gest = { x0: p.x, y0: p.y, t0: performance.now(), moved: false, dx: CAM.dx, dy: CAM.dy }; }
+  else if (ptrs.size === 2){ const [a, b] = [...ptrs.values()]; gest = { pinch: Math.hypot(a.x - b.x, a.y - b.y), zm: CAM.zm, moved: true }; }
+});
+$('vfWrap').addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId) || !gest) return;
+  const p = vfLocal(e); ptrs.set(e.pointerId, p);
+  if (gest.pinch && ptrs.size >= 2){ const [a, b] = [...ptrs.values()]; CAM.zm = clamp(gest.zm * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(20, gest.pinch), .6, 2); return; }
+  const ddx = p.x - gest.x0, ddy = p.y - gest.y0;
+  if (Math.hypot(ddx, ddy) > 8) gest.moved = true;
+  if (gest.moved && lastS){ const k = lastS.V.w / p.w; CAM.dx = clamp(gest.dx - ddx * k, -700, 700); CAM.dy = clamp(gest.dy - ddy * k, -300, 300); }
+});
+function ptrUp(e){
+  if (!ptrs.has(e.pointerId)) return;
+  const p = vfLocal(e); ptrs.delete(e.pointerId);
+  if (gest && !gest.moved && !gest.pinch && performance.now() - gest.t0 < 400) tapFocus(p);
+  if (!ptrs.size) gest = null;
+  else if (gest && gest.pinch){ const q = [...ptrs.values()][0]; gest = { x0: q.x, y0: q.y, t0: 0, moved: true, dx: CAM.dx, dy: CAM.dy }; }
+}
+$('vfWrap').addEventListener('pointerup', ptrUp); $('vfWrap').addEventListener('pointercancel', ptrUp);
+// tocar para enfocar: si tocas a Jorge, enfoca bien; si tocas el fondo, enfoca el fondo
+function tapFocus(p){
+  if (!lastS || !ST || ST.fase !== 'captura') return;
+  const S = lastS, P = plan(capR), wx = S.V.x + p.x / p.w * S.V.w, wy = S.V.y + p.y / p.h * S.V.h;
+  const onJ = wx >= S.J.x && wx <= S.J.x + S.J.w && wy >= S.J.y && wy <= S.J.y + S.J.h;
+  const fd = P.fd(S.t);
+  pfTarget = onJ ? fd : fd + (fd > .5 ? -1 : 1) * (.35 + Math.random() * .2);
+  const fb = $('focusBox'); fb.style.left = p.x + 'px'; fb.style.top = p.y + 'px';
+  fb.classList.remove('tap'); void fb.offsetWidth; fb.classList.add('tap');
+  tone(1500, .04, 'square', .05); tone(2000, .04, 'square', .05, 0, .07);
+}
+// exposición (deslizar arriba = más luz)
+function paintExpo(){ const t = $('expoThumb'); if (t) t.style.top = ((1 - (CAM.pe + 1) / 2) * 100) + '%'; const l = $('expoVal'); if (l) l.textContent = (CAM.pe >= 0 ? '+' : '') + (CAM.pe * 2).toFixed(1) + ' EV'; }
+(() => {
+  const ex = $('expo');
+  const set = e => { const r = ex.getBoundingClientRect(); CAM.pe = clamp(1 - (e.clientY - r.top) / r.height * 2, -1, 1); paintExpo(); };
+  ex.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); ex.setPointerCapture(e.pointerId); ex._on = 1; set(e); });
+  ex.addEventListener('pointermove', e => { if (ex._on) set(e); });
+  const up = () => ex._on = 0; ex.addEventListener('pointerup', up); ex.addEventListener('pointercancel', up);
+  ex.addEventListener('dblclick', () => { CAM.pe = 0; paintExpo(); });
+})();
 
 /* ---------- elegir foto ---------- */
 let pickT = 0, pickEnd = 0;
@@ -970,7 +1072,7 @@ function openPick(){
     pickedIdx = best;
     myShots.forEach((s, i) => {
       const d = document.createElement('div'); d.className = 'pol' + (i === best ? ' sel' : '');
-      d.appendChild(photoCanvas(capR, s.t, 360));
+      d.appendChild(photoCanvas(capR, s.t, 360, s.cam));
       d.insertAdjacentHTML('beforeend', `<div class="cap">${esc(s.q.cap)}</div><div class="qbar"><i style="width:${s.q.q}%"></i></div>${s.q.enc ? '<div class="cap" style="min-height:0;padding:0 2px 6px;color:#d62976;font-size:10px">📰 ¡ENCARGO CUMPLIDO!</div>' : ''}`);
       d.onclick = () => { SFX.click(); pickedIdx = i; L.querySelectorAll('.pol').forEach((p, k) => p.classList.toggle('sel', k === i)); };
       L.appendChild(d);
@@ -984,7 +1086,7 @@ function sendPick(){
   clearInterval(pickT);
   if (sentPhoto) return;
   sentPhoto = 1; SFX.whoosh();
-  if (pickedIdx >= 0){ const s = myShots[pickedIdx]; accion('foto', { ronda: capRound, t: s.t, q: s.q.q, enc: s.q.enc }); } else accion('nofoto', { ronda: capRound });
+  if (pickedIdx >= 0){ const s = myShots[pickedIdx]; accion('foto', { ronda: capRound, t: s.t, q: s.q.q, enc: s.q.enc, cam: s.cam }); } else accion('nofoto', { ronda: capRound });
   lastScreen = 'waitPhotos'; waitScreen(pickedIdx >= 0 ? '📸 FOTO ENVIADA' : '😅 SIN FOTO', 'Esperando a que el resto elija su foto…');
 }
 $('bPick').onclick = () => { SFX.click(); sendPick(); };
@@ -1012,9 +1114,9 @@ function runVote(){
       voteSlot = k; SFX.whoosh();
       $('vtDots').querySelectorAll('i').forEach((d, i) => d.classList.toggle('on', i <= k));
       const pid = orden[k], f = ST.fotos[ST.ronda][pid], mine = pid === ST.yo;
-      const q = quality(capR, f.t / 1000);
+      const q = quality(capR, f.t / 1000, f.cam);
       $('voteStage').innerHTML = `<div class="pol">${mine ? '<div class="mine">📷 ESTA ES TU FOTO</div>' : ''}<canvas></canvas><div class="cap">${esc(q.cap)}</div></div>`;
-      const c = photoCanvas(capR, f.t, 600); const old = $('voteStage').querySelector('canvas'); old.replaceWith(c);
+      const c = photoCanvas(capR, f.t, 600, f.cam); const old = $('voteStage').querySelector('canvas'); old.replaceWith(c);
       $('vtStars').style.visibility = mine ? 'hidden' : 'visible'; $('vtReacts').style.visibility = mine ? 'hidden' : 'visible';
       paintVote(pid);
     }
@@ -1042,13 +1144,13 @@ function screenResults(){
   SFX.drum();
   const order = res.slice().reverse();  // de peor a mejor, para dar emoción
   order.forEach((x, i) => {
-    const p = player(x.id), pos = res.indexOf(x), q = quality(R, x.t / 1000);
+    const p = player(x.id), pos = res.indexOf(x), q = quality(R, x.t / 1000, x.cam);
     const d = document.createElement('div'); d.className = 'resItem'; d.style.setProperty('--pc', p.c); d.style.animationDelay = (i * .9) + 's';
     const reac = Object.keys(x.reac || {}).map(k => k + (x.reac[k] > 1 ? '×' + x.reac[k] : '')).join(' ');
     d.innerHTML = `${pos < 3 ? '<div class="medal">' + ['🥇', '🥈', '🥉'][pos] + '</div>' : ''}<div class="pol"><canvas></canvas><div class="cap">${esc(q.cap)}</div></div>
       <div class="who"><b>${esc(p.n)}${x.id === ST.yo ? ' (tú)' : ''}</b><small>⭐ ${x.nv ? x.est.toFixed(1) + ' (' + x.nv + ' voto' + (x.nv > 1 ? 's' : '') + ')' : 'sin votos'} · 📷 ${x.q}${x.enc ? ' · 📰 +25' : ''}</small><small>${reac}</small></div>
       <div class="pts">+${x.pts}<small>PUNTOS</small></div>`;
-    d.querySelector('canvas').replaceWith(photoCanvas(R, x.t, 240));
+    d.querySelector('canvas').replaceWith(photoCanvas(R, x.t, 240, x.cam));
     L.prepend(d);
     setTimeout(() => { if (lastScreen === 'res') (pos === 0 ? (SFX.ding(), SFX.cheer()) : SFX.pop()); }, i * 900 + 300);
   });
@@ -1076,7 +1178,7 @@ function screenFinal(){
   $('fnPod').innerHTML = pod.map((j, i) => !j ? '<div class="pod"></div>' : `<div class="pod" style="animation-delay:${[.6, 1.2, 0][i]}s"><div class="ic">${['🥈', '👑', '🥉'][i]}</div><div class="nm" style="color:${j.c}">${esc(j.n)}</div><div class="bl" style="height:${[120, 170, 90][i]}px;background:${j.c}">${[2, 1, 3][i]}<small>${j.pts} pts</small></div></div>`).join('');
   // álbum: la mejor foto de cada ronda
   const A = $('fnAlbum'); A.innerHTML = '';
-  (ST.hist || []).forEach((res, i) => { const x = res && res[0]; if (!x) return; const R = R_of(i + 1), p = player(x.id); const d = document.createElement('div'); d.className = 'pol'; d.appendChild(photoCanvas(R, x.t, 300)); d.insertAdjacentHTML('beforeend', `<div class="cap">R${i + 1} · 📷 ${esc(p.n)}</div>`); A.appendChild(d); });
+  (ST.hist || []).forEach((res, i) => { const x = res && res[0]; if (!x) return; const R = R_of(i + 1), p = player(x.id); const d = document.createElement('div'); d.className = 'pol'; d.appendChild(photoCanvas(R, x.t, 300, x.cam)); d.insertAdjacentHTML('beforeend', `<div class="cap">R${i + 1} · 📷 ${esc(p.n)}</div>`); A.appendChild(d); });
   SFX.fanfare(); setTimeout(() => { confetti(220); SFX.cheer(); }, 1300);
   $('bSaveBest').style.display = myBest() ? '' : 'none';
 }
@@ -1088,7 +1190,7 @@ function myBest(){
 async function saveBest(){
   const b = myBest(); if (!b) return;
   SFX.click();
-  const R = R_of(b.n), ph = photoCanvas(R, b.x.t, 900), q = quality(R, b.x.t / 1000);
+  const R = R_of(b.n), ph = photoCanvas(R, b.x.t, 900, b.x.cam), q = quality(R, b.x.t / 1000, b.x.cam);
   const c = document.createElement('canvas'); c.width = 1000; c.height = 1420;
   const x = c.getContext('2d');
   x.fillStyle = '#fffdf7'; x.fillRect(0, 0, c.width, c.height);

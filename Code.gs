@@ -179,7 +179,7 @@ function cerrarRonda_(st, now) {
     const pEst = Math.round(est * 20), pQ = Math.round(Math.max(0, Math.min(100, Number(f.q) || 0)) / 2), pEnc = f.enc ? 25 : 0;
     const pts = pEst + pQ + pEnc;
     const j = st.jug.find(x => x.id === id); if (j) j.pts = (j.pts || 0) + pts;
-    res.push({ id, t: f.t, q: f.q, enc: !!f.enc, est: Math.round(est * 10) / 10, nv, pEst, pQ, pEnc, pts, reac });
+    res.push({ id, t: f.t, cam: f.cam, q: f.q, enc: !!f.enc, est: Math.round(est * 10) / 10, nv, pEst, pQ, pEnc, pts, reac });
   });
   res.sort((a, b) => b.pts - a.pts);
   st.hist[st.ronda - 1] = res;
@@ -220,7 +220,9 @@ function acc_(d) {
     st.fase = 'lobby'; st.jug = activos_(st, now); st.jug.forEach(j => j.pts = 0);
   } else if (a === 'foto' && st.fase === 'captura' && Number(d.ronda) === st.ronda) {
     const t = Number(d.t);
-    if (t >= 0 && t <= st.cfg.dur * 1000 + 50) st.fotos[st.ronda][me.id] = { t: Math.round(t), q: Math.max(0, Math.min(100, Math.round(Number(d.q) || 0))), enc: !!d.enc };
+    const c = d.cam || {}, n = (v, a, b) => Math.max(a, Math.min(b, Number(v) || 0));
+    const cam = { dx: Math.round(n(c.dx, -700, 700)), dy: Math.round(n(c.dy, -300, 300)), zm: n(c.zm || 1, .6, 2), pf: n(c.pf, -1, 2), pe: n(c.pe, -1, 1) };
+    if (t >= 0 && t <= st.cfg.dur * 1000 + 50) st.fotos[st.ronda][me.id] = { t: Math.round(t), q: Math.max(0, Math.min(100, Math.round(Number(d.q) || 0))), enc: !!d.enc, cam };
   } else if (a === 'nofoto' && st.fase === 'captura' && Number(d.ronda) === st.ronda) {
     st.nof = st.nof || {}; st.nof[st.ronda] = st.nof[st.ronda] || []; if (st.nof[st.ronda].indexOf(me.id) < 0) st.nof[st.ronda].push(me.id);
   } else if (a === 'votos' && st.fase === 'voto' && Number(d.ronda) === st.ronda) {
