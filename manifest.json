@@ -1,0 +1,2 @@
+{"name":"PAPARAZZI","short_name":"PAPARAZZI","start_url":"./","display":"standalone","orientation":"portrait","background_color":"#14051f","theme_color":"#14051f",
+"icons":[{"src":"icono-192.png","sizes":"192x192","type":"image/png"},{"src":"icono-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
