@@ -464,7 +464,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-10.1';
+const VERSION = '2026-11-10.2';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -1472,6 +1472,7 @@ function autoSepara(poses){
 const fmtLlave = id => id ? id.toUpperCase().match(/.{1,2}/g).join(':') : '';
 async function verLlaves(lista){
   if (!lista){ modal('<h3>🔑 LLAVES NFC</h3><p class="mSub">Cargando…</p>'); try{ lista = (await adm('admLlaves')).llaves; }catch(e){ return pintaAdmin(); } }
+  if (!Array.isArray(lista)){ toast('El servidor aún no tiene la versión nueva: hay que publicar la implementación del Apps Script', 'err', 5000); return pintaAdmin(); }
   const hay = 'NDEFReader' in window;
   const filas = lista.map((l, i) => `<div class="llRow${l.yo ? ' yo' : ''}"><div class="llIc">🔑</div><div class="llTx"><b>${l.id ? fmtLlave(l.id) : 'Llave ' + (i + 1)}</b><small>${l.yo ? '✅ Es la llave con la que has entrado' : (l.id ? 'Llave guardada' : 'ID desconocido: pásala para entrar y se verá aquí')}</small></div>
     <button class="llDel" data-h="${l.h}" ${lista.length <= 1 ? 'disabled title="Tiene que quedar al menos una"' : ''}>🗑️</button></div>`).join('');
