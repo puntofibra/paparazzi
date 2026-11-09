@@ -39,6 +39,8 @@ function rutear_(d) {
       case 'admPose': return admPose_(d);
       case 'admPoses': return conLock_(() => admPoses_(d));
       case 'pjImg': return pjImg_(d);
+      case 'precio': return { ok: true, precio: precio_() };
+      case 'admPrecio': return admPrecio_(d);
       default: return { ok: true, juego: 'PAPARAZZI' };
     }
   } catch (err) {
@@ -461,3 +463,13 @@ function pjImg_(d) {
   return { ok: true, b64: Utilities.base64Encode(DriveApp.getFileById(id).getBlob().getBytes()) };
 }
 function autorizarDrive() { DriveApp.getRootFolder(); }
+
+/* ---------- precio del personaje propio (se cambia desde el panel admin) ---------- */
+function precio_() { const v = Number(PropertiesService.getScriptProperties().getProperty('precio')); return v > 0 ? v : 9.95; }
+function admPrecio_(d) {
+  esAdm_(d);
+  const n = Math.round(Number(d.precio) * 100) / 100;
+  if (!(n >= 0.5 && n <= 999)) return { ok: false, error: 'Precio no válido' };
+  PropertiesService.getScriptProperties().setProperty('precio', String(n));
+  return { ok: true, precio: n };
+}

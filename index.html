@@ -77,7 +77,8 @@ input{font-family:inherit}
 .pl.empty{border-style:dashed;border-color:var(--line);color:var(--mute);font-weight:600}
 .pl.empty i{background:rgba(255,255,255,.08);box-shadow:none}
 @keyframes plIn{from{transform:scale(.5);opacity:0}}
-.pjs{display:flex;gap:10px;justify-content:center;margin-bottom:4px}
+.pjs{display:flex;flex-wrap:wrap;gap:14px 10px;justify-content:center;margin-bottom:4px;padding:8px 6px 0;max-width:100%;box-sizing:border-box}
+.pjs .pjc{flex:none}
 .pjc{width:86px;border-radius:16px;padding:6px 4px 8px;background:rgba(0,0,0,.3);border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:13px}
 .pjc img{height:74px;object-fit:contain}
 .pjc.on{border-color:var(--yellow);box-shadow:0 0 16px rgba(255,214,10,.4)}
@@ -460,7 +461,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.13';
+const VERSION = '2026-11-09.14';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -1102,6 +1103,12 @@ function confirmar(tit, sub, ok){
     m.querySelector('#cSi').onclick = () => { cerrarModal(); res(true); };
   });
 }
+/* ---------- precio del personaje propio (se cambia desde el panel admin) ---------- */
+let PRECIO = Number(LS.get('precio', 9.95)) || 9.95;
+const precioTxt = () => (Number.isInteger(PRECIO) ? String(PRECIO) : PRECIO.toFixed(2).replace('.', ',')) + '€';
+const myposUrl = () => 'https://mypos.com/@futurmovil/' + (Number.isInteger(PRECIO) ? String(PRECIO) : PRECIO.toFixed(2));   // con punto: con coma myPOS cobra 0
+const waPagoUrl = () => 'https://wa.me/34633200100?text=' + encodeURIComponent('¡Hola! 👋 Ya he pagado los ' + precioTxt() + ' de mi personaje personalizado para PAPARAZZI 📸. Te envío mi foto para que lo creéis:');
+async function cargarPrecio(){ const r = await api('precio', {}, 15000); if (r && r.ok && r.precio > 0){ PRECIO = Number(r.precio); LS.set('precio', PRECIO); } }
 /* ---------- añadir / editar personaje con código ---------- */
 function anadirPj(){
   const m = modal(`<h3>➕ AÑADIR PERSONAJE</h3><p class="mSub">Escribe el código de 4 caracteres que te han dado para desbloquear tu personaje personalizado</p>
@@ -1111,12 +1118,12 @@ function anadirPj(){
     <div class="wpCard"><div class="wpTag">⭐ EXCLUSIVO</div>
       <div class="wpT">¿Quieres salir <b>TÚ</b> en el juego?</div>
       <p class="wpD">Te convertimos en personaje de dibujos animados con 10 poses y te damos tu código para jugar con tus amigos.</p>
-      <div class="wpPrice"><strong>9,95€</strong><span>pago único</span></div>
+      <div class="wpPrice"><strong>${precioTxt()}</strong><span>pago único</span></div>
       <div class="wpStep"><i>1</i>Paga de forma segura con tarjeta, Google Pay o Apple Pay</div>
-      <a class="wpPay" id="pcPay" href="https://mypos.com/@futurmovil/9.95" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg>PAGAR 9,95€</a>
+      <a class="wpPay" id="pcPay" href="${myposUrl()}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg>PAGAR ${precioTxt()}</a>
       <div class="wpSafe">🔒 Pago seguro con <b>myPOS</b><b>VISA</b><b>Mastercard</b><b>G Pay</b></div>
       <div class="wpStep s2"><i>2</i>Escríbenos y envíanos tu foto: ¡en breve tendrás tu código!</div>
-      <a class="wpBtn" id="pcWa" href="https://wa.me/34633200100?text=%C2%A1Hola!%20%F0%9F%91%8B%20Ya%20he%20pagado%20los%209%2C95%E2%82%AC%20de%20mi%20personaje%20personalizado%20para%20PAPARAZZI%20%F0%9F%93%B8.%20Te%20env%C3%ADo%20mi%20foto%20para%20que%20lo%20cre%C3%A9is%3A" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm5.8 14.13c-.24.68-1.42 1.32-1.96 1.36-.5.05-.97.24-3.27-.68-2.77-1.09-4.52-3.93-4.66-4.11-.13-.18-1.11-1.48-1.11-2.82 0-1.34.7-2 .95-2.27.24-.27.53-.34.71-.34l.51.01c.16.01.38-.06.6.46.24.55.79 1.89.86 2.03.07.14.11.3.02.48-.09.18-.14.3-.27.46-.14.16-.29.35-.41.47-.14.14-.28.29-.12.56.16.27.71 1.17 1.52 1.89 1.05.93 1.93 1.22 2.2 1.36.27.14.43.11.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.6-.14.25.09 1.57.74 1.84.88.27.14.45.2.52.32.07.11.07.66-.17 1.33z"/></svg>YA HE PAGADO · ENVIAR FOTO</a>
+      <a class="wpBtn" id="pcWa" href="${waPagoUrl()}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm5.8 14.13c-.24.68-1.42 1.32-1.96 1.36-.5.05-.97.24-3.27-.68-2.77-1.09-4.52-3.93-4.66-4.11-.13-.18-1.11-1.48-1.11-2.82 0-1.34.7-2 .95-2.27.24-.27.53-.34.71-.34l.51.01c.16.01.38-.06.6.46.24.55.79 1.89.86 2.03.07.14.11.3.02.48-.09.18-.14.3-.27.46-.14.16-.29.35-.41.47-.14.14-.28.29-.12.56.16.27.71 1.17 1.52 1.89 1.05.93 1.93 1.22 2.2 1.36.27.14.43.11.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.6-.14.25.09 1.57.74 1.84.88.27.14.45.2.52.32.07.11.07.66-.17 1.33z"/></svg>YA HE PAGADO · ENVIAR FOTO</a>
       
     </div>
     <button class="btn alt" id="pcNo">CANCELAR</button>`);
@@ -1216,12 +1223,20 @@ function pintaAdmin(){
       <div class="aBtns"><button data-a="pos" data-id="${p.id}">📷 Poses</button><button data-a="ren" data-id="${p.id}">✏️ Nombre</button><button data-a="cod" data-id="${p.id}">🔄 Código</button><button data-a="act" data-id="${p.id}">${p.activo ? '🚫 Desactivar' : '✅ Activar'}</button><button class="red" data-a="del" data-id="${p.id}">🗑️</button></div></div>
     <div class="cd" data-a="copy" data-c="${p.code}">${p.code}</div></div>`).join('');
   const m = modal(`<h3>🔑 PANEL ADMIN</h3><p class="mSub">Personajes con código · Jorge es fijo y lo tiene todo el mundo. Toca un código para copiarlo.</p>
-    <button class="btn y" id="apPrompt">📝 PROMPT</button>
+    <button class="btn y" id="apPrompt">📝 PROMPT</button><button class="btn alt" id="apPrecio">💶 PRECIO DEL PERSONAJE: ${precioTxt()}</button>
     <div style="margin-top:14px">${rows || '<p class="mSub">Todavía no hay personajes extra</p>'}</div>
     <button class="btn c" id="apNew">＋ NUEVO PERSONAJE</button><button class="btn alt" id="apOut">🚪 CERRAR SESIÓN ADMIN</button><button class="btn alt" id="apNo">CERRAR</button>`);
   m.querySelector('#apNo').onclick = cerrarModal;
   m.querySelector('#apOut').onclick = () => { ADM = ''; try{ sessionStorage.removeItem('pz_adm'); }catch(e){} cerrarModal(); toast('Sesión de admin cerrada', 'info'); };
   m.querySelector('#apPrompt').onclick = verPrompt;
+  m.querySelector('#apPrecio').onclick = async () => {
+    const v = await pedirTexto('💶 PRECIO DEL PERSONAJE', 'Lo que se cobra por crear un personaje propio. Cambia el precio que se ve, el pago de myPOS y el mensaje de WhatsApp. Ejemplo: 12,50', precioTxt().replace('€', ''));
+    if (!v) return pintaAdmin();
+    const n = Math.round(Number(String(v).replace('€', '').replace(',', '.').trim()) * 100) / 100;
+    if (!(n >= 0.5 && n <= 999)){ toast('Pon un precio válido, por ejemplo 12,50', 'err'); return pintaAdmin(); }
+    try{ const r = await adm('admPrecio', { precio: n }); if (!(Number(r.precio) > 0)){ toast('El servidor aún no tiene la versión nueva: publica la implementación del Apps Script', 'err', 4000); return pintaAdmin(); } PRECIO = Number(r.precio); LS.set('precio', PRECIO); toast('✅ Precio cambiado a ' + precioTxt(), 'ok'); }catch(e){}
+    pintaAdmin();
+  };
   m.querySelector('#apNew').onclick = async () => { const n = await pedirTexto('➕ NUEVO PERSONAJE', 'Nombre del personaje (solo lo ves tú). Después subes la imagen con sus 10 poses.', ''); if (!n) return pintaAdmin(); try{ const antes = ADMPJ.map(x => x.id); ADMPJ = (await adm('admGuardar', { n, code: 'NUEVO' })).pjs; toast('✅ Personaje creado', 'ok'); const nuevo = ADMPJ.find(x => antes.indexOf(x.id) < 0); if (nuevo) return verPoses(nuevo.id); }catch(e){} pintaAdmin(); };
   m.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
     const p = ADMPJ.find(x => x.id === b.dataset.id), a = b.dataset.a;
@@ -2077,7 +2092,7 @@ async function checkUpdate(){
 setInterval(checkUpdate, 60000); setTimeout(checkUpdate, 4000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
-loadAll(); homeJorge(); cargarMisPj();
+loadAll(); homeJorge(); cargarMisPj(); cargarPrecio();
 (function boot(){
   const q = new URLSearchParams(location.search), code = (q.get('s') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   if (code){
