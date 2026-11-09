@@ -458,7 +458,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.10';
+const VERSION = '2026-11-09.11';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -947,11 +947,11 @@ function photoCanvas(R, t, w, cam){
    ========================================================= */
 let AC = null, master = null, musicOn = LS.get('snd', true), musicT = null;
 function initAudio(){
-  if (AC){ if (AC.state === 'suspended') AC.resume(); return; }
+  if (AC){ if (AC.state === 'suspended' && !document.hidden) AC.resume(); return; }
   try{ AC = new (window.AudioContext || window.webkitAudioContext)(); master = AC.createGain(); master.gain.value = .6; master.connect(AC.destination); }catch(e){ AC = null; }
 }
 function tone(f, d, type, v, f2, t0){
-  if (!AC || !musicOn) return;
+  if (!AC || !musicOn || document.hidden) return;
   const t = AC.currentTime + (t0 || 0), o = AC.createOscillator(), g = AC.createGain();
   o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
   g.gain.setValueAtTime(v || .15, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
@@ -959,7 +959,7 @@ function tone(f, d, type, v, f2, t0){
 }
 let nBuf = null;
 function noise(d, v, freq, type, t0){
-  if (!AC || !musicOn) return;
+  if (!AC || !musicOn || document.hidden) return;
   if (!nBuf){ nBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const c = nBuf.getChannelData(0); for (let i = 0; i < c.length; i++) c[i] = Math.random() * 2 - 1; }
   const t = AC.currentTime + (t0 || 0), s = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain();
   s.buffer = nBuf; fl.type = type || 'highpass'; fl.frequency.value = freq || 2000;
@@ -995,6 +995,11 @@ function musicStart(){
   }, 125);
 }
 function musicStop(){ clearInterval(musicT); musicT = null; }
+// en segundo plano o con la pantalla apagada: silencio total; al volver, sigue sonando
+function silencioFondo(){ if (!AC) return; try{ if (document.hidden){ if (AC.state === 'running') AC.suspend(); } else if (AC.state === 'suspended') AC.resume(); }catch(e){} }
+document.addEventListener('visibilitychange', silencioFondo);
+addEventListener('pagehide', () => { try{ AC && AC.suspend(); }catch(e){} });
+addEventListener('pageshow', silencioFondo);
 $('bMute').onclick = () => { musicOn = !musicOn; LS.set('snd', musicOn); $('bMute').textContent = musicOn ? '🔊' : '🔇'; initAudio(); };
 $('bMute').textContent = musicOn ? '🔊' : '🔇';
 
