@@ -259,6 +259,8 @@ body.inGame .pTop{padding-right:62px}
 .ppT img{width:100%;height:120px;object-fit:contain;display:block;touch-action:manipulation}
 .ppT.brr img{cursor:crosshair;outline:2px dashed var(--yellow);outline-offset:-2px;border-radius:8px}
 .ppT span{display:block;font-size:11px;font-weight:800;margin-top:4px}
+.ppSel{width:100%;margin-top:4px;font:800 11px Rubik,sans-serif;padding:4px 2px;border-radius:8px;background:rgba(0,0,0,.45);color:#fff;border:1px solid var(--line)}
+.ppAcc{display:flex;gap:4px;margin-top:4px}.ppAcc button{flex:1;padding:5px 0;border-radius:8px;background:rgba(255,255,255,.1);border:1px solid var(--line);font-size:14px}
 .ppTools{display:flex;gap:6px;margin-top:10px}.ppTools button{flex:1;font-size:12px;font-weight:800;padding:9px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
 .ppTools button.on{background:var(--yellow);color:#3a1a00}.ppTools button:disabled{opacity:.4}
 .aBtns button{font-size:12px;font-weight:800;padding:6px 9px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
@@ -458,7 +460,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.12';
+const VERSION = '2026-11-09.13';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -1324,7 +1326,7 @@ function recortarPoses(img){
   const S = Math.max(2, Math.round(W / 500)), gw = Math.ceil(W / S), gh = Math.ceil(H / S), G = gw * gh;
   const g = new Uint8Array(G);
   for (let Y = 0; Y < H; Y++){ const r = ((Y / S) | 0) * gw; for (let X = 0; X < W; X++) if (d[(Y * W + X) * 4 + 3] > 20) g[r + ((X / S) | 0)] = 1; }
-  const R = 3, gd = new Uint8Array(G);
+  const R = 2, gd = new Uint8Array(G);
   for (let y = 0; y < gh; y++) for (let xx = 0; xx < gw; xx++) if (g[y * gw + xx])
     for (let dy = -R; dy <= R; dy++){ const yy = y + dy; if (yy < 0 || yy >= gh) continue; for (let dx = -R; dx <= R; dx++){ const x2 = xx + dx; if (x2 >= 0 && x2 < gw) gd[yy * gw + x2] = 1; } }
   const lab = new Int32Array(G), q = new Int32Array(G), comps = []; let nl = 0;
@@ -1345,6 +1347,14 @@ function recortarPoses(img){
   if (!comps.length) return { poses: [], sinFondo };
   comps.sort((a, b) => b.n - a.n);
   const sel = comps.filter(c => c.n >= comps[0].n * .15).slice(0, 10);
+  // los trocitos sueltos (una lágrima, un cordel…) se quedan con la figura más cercana en vez de perderse
+  const dueno = new Int32Array(nl + 1);
+  comps.forEach(c => {
+    if (sel.includes(c)){ dueno[c.l] = c.l; return; }
+    const cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2; let best = sel[0], bd = 1e18;
+    sel.forEach(s2 => { const dx = Math.max(s2.x0 - cx, 0, cx - s2.x1), dy = Math.max(s2.y0 - cy, 0, cy - s2.y1), dd = dx * dx + dy * dy; if (dd < bd){ bd = dd; best = s2; } });
+    dueno[c.l] = best.l; best.x0 = Math.min(best.x0, c.x0); best.y0 = Math.min(best.y0, c.y0); best.x1 = Math.max(best.x1, c.x1); best.y1 = Math.max(best.y1, c.y1);
+  });
   // orden de lectura: filas de arriba abajo y cada fila de izquierda a derecha
   const altoMed = sel.reduce((a, c) => a + (c.y1 - c.y0), 0) / sel.length;
   sel.forEach(c => { c.cy = (c.y0 + c.y1) / 2; c.cx = (c.x0 + c.x1) / 2; });
@@ -1355,7 +1365,7 @@ function recortarPoses(img){
     const X0 = c.x0 * S, Y0 = c.y0 * S, X1 = Math.min(W, (c.x1 + 1) * S), Y1 = Math.min(H, (c.y1 + 1) * S), w = X1 - X0, h = Y1 - Y0;
     const pc = lienzo(w, h), px = ctx2(pc), src = x.getImageData(X0, Y0, w, h).data, pd = px.createImageData(w, h);
     for (let y = 0; y < h; y++){ const r = (((Y0 + y) / S) | 0) * gw; for (let xx = 0; xx < w; xx++){
-      if (lab[r + (((X0 + xx) / S) | 0)] !== c.l) continue;
+      if (dueno[lab[r + (((X0 + xx) / S) | 0)]] !== c.l) continue;
       const o = (y * w + xx) * 4; pd.data[o] = src[o]; pd.data[o + 1] = src[o + 1]; pd.data[o + 2] = src[o + 2]; pd.data[o + 3] = src[o + 3];
     } }
     px.putImageData(pd, 0, 0);
@@ -1376,11 +1386,73 @@ function borrarHueco(pc, X, Y){
   if (sem < 0) return 0;
   const n = quitaBlanco(d, W, H, [sem]); x.putImageData(id, 0, 0); return n;
 }
+// recorta un lienzo al tamaño justo de lo que tiene dibujado
+function ajusta(c){
+  const W = c.width, H = c.height, d = ctx2(c).getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 8){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const o = lienzo(x1 - x0 + 1, y1 - y0 + 1); o.getContext('2d').drawImage(c, -x0, -y0); return o;
+}
+// copia solo los píxeles que cumplen keep(x, y)
+function parte(c, keep){
+  const W = c.width, H = c.height, x = ctx2(c), id = x.getImageData(0, 0, W, H), o = lienzo(W, H), ox = ctx2(o), od = ox.createImageData(W, H);
+  for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) if (keep(xx, y)){ const i = (y * W + xx) * 4; od.data[i] = id.data[i]; od.data[i + 1] = id.data[i + 1]; od.data[i + 2] = id.data[i + 2]; od.data[i + 3] = id.data[i + 3]; }
+  ox.putImageData(od, 0, 0); return ajusta(o);
+}
+// una pose que ha salido doble (dos figuras juntas) → intenta separarla en dos, en orden de lectura
+function separarDoble(c){
+  const W = c.width, H = c.height, d = ctx2(c).getImageData(0, 0, W, H).data, N = W * H;
+  const op = new Uint8Array(N); for (let i = 0; i < N; i++) op[i] = d[i * 4 + 3] > 20 ? 1 : 0;
+  // 1) ¿son dos manchas que solo se acercaban? (se etiqueta sin margen)
+  for (const R of [2, 1, 0]){
+    let m = op;
+    if (R){ m = new Uint8Array(N); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (op[y * W + x]) for (let dy = -R; dy <= R; dy++){ const yy = y + dy; if (yy < 0 || yy >= H) continue; for (let dx = -R; dx <= R; dx++){ const xx = x + dx; if (xx >= 0 && xx < W) m[yy * W + xx] = 1; } } }
+    const lab = new Int32Array(N), q = new Int32Array(N), cs = []; let nl = 0;
+    for (let s = 0; s < N; s++){
+      if (!m[s] || lab[s]) continue; nl++; let h = 0, t = 0; q[t++] = s; lab[s] = nl; const cc = { l: nl, n: 0, sx: 0, sy: 0 };
+      while (h < t){ const k = q[h++], X = k % W, Y = (k / W) | 0; if (op[k]){ cc.n++; cc.sx += X; cc.sy += Y; }
+        if (X > 0 && m[k - 1] && !lab[k - 1]){ lab[k - 1] = nl; q[t++] = k - 1; } if (X < W - 1 && m[k + 1] && !lab[k + 1]){ lab[k + 1] = nl; q[t++] = k + 1; }
+        if (Y > 0 && m[k - W] && !lab[k - W]){ lab[k - W] = nl; q[t++] = k - W; } if (Y < H - 1 && m[k + W] && !lab[k + W]){ lab[k + W] = nl; q[t++] = k + W; } }
+      if (cc.n){ cc.cx = cc.sx / cc.n; cc.cy = cc.sy / cc.n; cs.push(cc); }
+    }
+    cs.sort((a, b) => b.n - a.n);
+    if (cs.length >= 2 && cs[1].n > cs[0].n * .2){
+      const A = cs[0], B = cs[1], dueno = {};
+      cs.forEach(cc => { dueno[cc.l] = (cc === A || cc === B) ? cc : ((cc.cx - A.cx) ** 2 + (cc.cy - A.cy) ** 2 <= (cc.cx - B.cx) ** 2 + (cc.cy - B.cy) ** 2 ? A : B); });
+      const [p1, p2] = (Math.abs(A.cy - B.cy) > Math.abs(A.cx - B.cx) ? A.cy < B.cy : A.cx < B.cx) ? [A, B] : [B, A];
+      const r1 = parte(c, (x, y) => dueno[lab[y * W + x]] === p1), r2 = parte(c, (x, y) => dueno[lab[y * W + x]] === p2);
+      if (r1 && r2) return [r1, r2];
+    }
+  }
+  // 2) se tocan de verdad → corte por la zona más estrecha (vertical u horizontal)
+  const col = new Float64Array(W), fil = new Float64Array(H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (op[y * W + x]){ col[x]++; fil[y]++; }
+  const valle = (v, L) => { let best = -1, bv = 1e18, media = 0; for (let i = 0; i < L; i++) media += v[i]; media /= L;
+    for (let i = Math.floor(L * .25); i <= Math.ceil(L * .75); i++){ let s = 0, n = 0; for (let k = -3; k <= 3; k++){ const j = i + k; if (j >= 0 && j < L){ s += v[j]; n++; } } s /= n; if (s < bv){ bv = s; best = i; } }
+    return { i: best, sc: media ? bv / media : 1 }; };
+  const vx = valle(col, W), vy = valle(fil, H);
+  const vert = W >= H * .55 ? (vx.sc <= vy.sc * 1.3 || H < W) : vx.sc < vy.sc * .6;
+  const r = vert ? [parte(c, x => x < vx.i), parte(c, x => x >= vx.i)] : [parte(c, (x, y) => y < vy.i), parte(c, (x, y) => y >= vy.i)];
+  return r[0] && r[1] ? r : null;
+}
+// si faltan poses, separa sola las que son claramente dobles (el doble de anchas o de altas que las demás)
+function autoSepara(poses){
+  for (let v = 0; v < 4 && poses.length < 10 && poses.length >= 2; v++){
+    const ws = poses.map(c => c.width).sort((a, b) => a - b), hs = poses.map(c => c.height).sort((a, b) => a - b);
+    const mw = ws[ws.length >> 1], mh = hs[hs.length >> 1];
+    let bi = -1, br = 0; poses.forEach((c, i) => { const r = Math.max(c.width / mw, c.height / mh); if (r > br){ br = r; bi = i; } });
+    if (br < 1.75) break;
+    const sp = separarDoble(poses[bi]); if (!sp) break;
+    poses.splice(bi, 1, sp[0], sp[1]);
+  }
+  return poses;
+}
 
 /* ---------- panel admin: subir la imagen de las 10 poses desde el móvil ---------- */
 function verPoses(pid){
   const p = ADMPJ.find(x => x.id === pid); if (!p) return pintaAdmin();
-  let poses = [], borrar = false, hist = [];
+  let poses = [], borrar = false, hist = [];   // poses: [{ c: lienzo, k: clave de pose }]
   const m = modal(`<h3>📷 POSES DE ${esc(p.n.toUpperCase())}</h3>
     <p class="mSub">Elige la imagen de Gemini con las 10 poses, con fondo blanco o ya sin fondo. Se recorta sola aquí mismo.</p>
     <label class="btn y ppPick">📁 ELEGIR IMAGEN<input type="file" accept="image/*" id="ppFile" hidden></label>
@@ -1388,31 +1460,51 @@ function verPoses(pid){
     <div id="ppTools" class="ppTools" style="display:none"><button id="ppBorrar">🧽 Borrar huecos blancos: NO</button><button id="ppUndo">↩️ Deshacer</button></div>
     <button class="btn c" id="ppOk" style="display:none">💾 GUARDAR POSES</button><button class="btn alt" id="ppNo">⬅️ VOLVER</button>`);
   const msg = (t, err) => { const e = m.querySelector('#ppMsg'); e.textContent = t; e.classList.toggle('err', !!err); };
+  const guarda = () => hist.push(poses.map(x => ({ c: x.c, k: x.k })));
+  const renumera = () => poses.forEach((x, i) => x.k = POSE_K[i] || ('extra' + i));
+  const aviso = () => {
+    if (!poses.length) return msg('No he encontrado ninguna figura en la imagen', true);
+    if (poses.length === 10) return msg('✅ Hay 10 poses. Revisa que cada una tenga su nombre bien. Si queda algún hueco blanco, activa 🧽 y tócalo.');
+    msg('⚠️ Hay ' + poses.length + ' poses y deberían ser 10. Si alguna ha salido doble, toca ✂️ en esa para separarla, o 🗑️ para quitarla. Debajo de cada una puedes cambiar qué pose es.', true);
+  };
   const pinta = () => {
     const gEl = m.querySelector('#ppGrid'); gEl.innerHTML = '';
-    poses.forEach((c, i) => {
-      const t = document.createElement('div'); t.className = 'ppT' + (borrar ? ' brr' : '');
+    poses.forEach((ps, i) => {
+      const c = ps.c, t = document.createElement('div'); t.className = 'ppT' + (borrar ? ' brr' : '');
       const im = new Image(); im.src = c.toDataURL('image/png'); t.appendChild(im);
-      const s = document.createElement('span'); s.textContent = (i + 1) + ' · ' + (POSE_N[i] || 'Extra'); t.appendChild(s);
+      const sel = document.createElement('select'); sel.className = 'ppSel';
+      sel.innerHTML = POSE_K.map((k, j) => `<option value="${k}"${k === ps.k ? ' selected' : ''}>${j + 1} · ${POSE_N[j]}</option>`).join('') + (POSE_K.includes(ps.k) ? '' : `<option value="${ps.k}" selected>Extra</option>`);
+      sel.onchange = () => { guarda(); ps.k = sel.value; pinta(); };
+      t.appendChild(sel);
+      const bs = document.createElement('div'); bs.className = 'ppAcc';
+      bs.innerHTML = '<button data-x="sep" title="Separar si salen dos juntas">✂️</button><button data-x="del" title="Quitar">🗑️</button>';
+      bs.querySelector('[data-x="sep"]').onclick = () => {
+        const sp = separarDoble(c);
+        if (!sp) return toast('No he podido separarla. Quítala con 🗑️ o pide a Gemini que separe más las poses.', 'err', 3500);
+        guarda(); poses.splice(i, 1, { c: sp[0] }, { c: sp[1] }); renumera(); SFX.pop(); aviso(); pinta();
+      };
+      bs.querySelector('[data-x="del"]').onclick = () => { guarda(); poses.splice(i, 1); aviso(); pinta(); };
+      t.appendChild(bs);
       im.onclick = ev => {
         if (!borrar) return;
         const r = im.getBoundingClientRect(), k = Math.min(r.width / c.width, r.height / c.height);
         const ox = r.left + (r.width - c.width * k) / 2, oy = r.top + (r.height - c.height * k) / 2;
         const copia = lienzo(c.width, c.height); copia.getContext('2d').drawImage(c, 0, 0);
-        const n = borrarHueco(c, (ev.clientX - ox) / k, (ev.clientY - oy) / k);
-        if (n){ hist.push({ i, c: copia }); SFX.pop(); pinta(); } else toast('Toca justo encima de la zona blanca', 'info', 1800);
+        const n = borrarHueco(copia, (ev.clientX - ox) / k, (ev.clientY - oy) / k);
+        if (n){ guarda(); ps.c = copia; SFX.pop(); pinta(); } else toast('Toca justo encima de la zona blanca', 'info', 1800);
       };
       gEl.appendChild(t);
     });
-    m.querySelector('#ppTools').style.display = poses.length ? '' : 'none';
-    m.querySelector('#ppOk').style.display = poses.length ? '' : 'none';
+    const hay = poses.length > 0;
+    m.querySelector('#ppTools').style.display = hay ? '' : 'none';
+    const bo = m.querySelector('#ppOk'); bo.style.display = hay ? '' : 'none'; if (!bo.disabled){ bo.textContent = '💾 GUARDAR POSES'; delete bo.dataset.ok; }
     m.querySelector('#ppBorrar').textContent = '🧽 Borrar huecos blancos: ' + (borrar ? 'SÍ' : 'NO');
     m.querySelector('#ppBorrar').classList.toggle('on', borrar);
     m.querySelector('#ppUndo').disabled = !hist.length;
   };
   m.querySelector('#ppNo').onclick = pintaAdmin;
   m.querySelector('#ppBorrar').onclick = () => { borrar = !borrar; pinta(); if (borrar) toast('Toca los trozos blancos que sobren dentro de cada pose', 'info', 2600); };
-  m.querySelector('#ppUndo').onclick = () => { const h = hist.pop(); if (h){ poses[h.i] = h.c; pinta(); } };
+  m.querySelector('#ppUndo').onclick = () => { const h = hist.pop(); if (h){ poses = h; aviso(); pinta(); } };
   m.querySelector('#ppFile').onchange = async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     msg('✂️ Recortando…'); poses = []; hist = []; pinta();
@@ -1420,21 +1512,25 @@ function verPoses(pid){
       const url = URL.createObjectURL(f), im = new Image(); im.src = url; await im.decode();
       await new Promise(r => setTimeout(r, 30));
       const r = recortarPoses(im); URL.revokeObjectURL(url);
-      poses = r.poses;
-      if (!poses.length) msg('No he encontrado ninguna figura en la imagen', true);
-      else if (poses.length !== 10) msg('⚠️ He encontrado ' + poses.length + ' figuras y esperaba 10. Puede que dos poses se toquen; si no te convence, pide a Gemini que las separe más.', true);
-      else msg('✅ 10 poses ' + (r.sinFondo ? 'separadas (la imagen ya venía sin fondo)' : 'recortadas') + '. Si queda algún hueco blanco, activa 🧽 y tócalo.');
+      const antes = r.poses.length, lista = autoSepara(r.poses);
+      poses = lista.map(c => ({ c })); renumera();
+      aviso();
+      if (poses.length === 10 && antes < 10) toast('✂️ Había ' + (10 - antes) + ' pose(s) doble(s) y las he separado. Revísalas.', 'info', 4000);
     }catch(err){ msg('No pude abrir esa imagen', true); }
     pinta(); e.target.value = '';
   };
   m.querySelector('#ppOk').onclick = async () => {
-    const b = m.querySelector('#ppOk'); if (b.disabled) return; b.disabled = true;
+    const b = m.querySelector('#ppOk'); if (b.disabled) return;
+    const ks = poses.map(x => x.k), rep = ks.find((k, i) => ks.indexOf(k) !== i);
+    if (rep){ const j = POSE_K.indexOf(rep); return toast('Hay dos poses marcadas como "' + (POSE_N[j] || rep) + '". Cambia una en su desplegable.', 'err', 3500); }
+    if (poses.length !== 10 && b.dataset.ok !== String(poses.length)){ b.dataset.ok = String(poses.length); b.textContent = '⚠️ SOLO ' + poses.length + ' POSES · PULSA OTRA VEZ PARA GUARDAR'; return; }
+    b.disabled = true;
     const subidas = [];
     try{
       for (let i = 0; i < poses.length; i++){
         b.textContent = '⏫ SUBIENDO ' + (i + 1) + '/' + poses.length + '…';
-        const r = await adm('admPose', { id: pid, k: POSE_K[i] || ('extra' + i), b64: poses[i].toDataURL('image/png').split(',')[1] });
-        subidas.push({ k: POSE_K[i] || ('extra' + i), f: r.f });
+        const r = await adm('admPose', { id: pid, k: poses[i].k, b64: poses[i].c.toDataURL('image/png').split(',')[1] });
+        subidas.push({ k: poses[i].k, f: r.f });
       }
       b.textContent = '💾 GUARDANDO…';
       ADMPJ = (await adm('admPoses', { id: pid, poses: subidas })).pjs;
