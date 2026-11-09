@@ -36,6 +36,9 @@ function rutear_(d) {
       case 'admLista': return admLista_(d);
       case 'admGuardar': return conLock_(() => admGuardar_(d));
       case 'admBorrar': return conLock_(() => admBorrar_(d));
+      case 'admPose': return admPose_(d);
+      case 'admPoses': return conLock_(() => admPoses_(d));
+      case 'pjImg': return pjImg_(d);
       default: return { ok: true, juego: 'PAPARAZZI' };
     }
   } catch (err) {
@@ -320,7 +323,7 @@ function pjPorCodigo_(code) {
 }
 function pjPub_(P) {
   const base = 'personajes/' + P.id + '/';
-  const fx = f => /^https?:|\//.test(f) ? f : base + f;
+  const fx = f => /^https?:|^gd:|\//.test(f) ? f : base + f;
   return { id: P.id, n: P.n, icon: fx(P.icon || (P.poses[0] && P.poses[0].f) || ''), poses: P.poses.map(x => Object.assign({}, x, { f: fx(x.f) })) };
 }
 function freno_(clave, max, seg) {
@@ -397,3 +400,64 @@ function admBorrar_(d) {
   pjLimpiaCache_();
   return admLista_(d);
 }
+
+/* ---------- poses subidas desde el panel admin (el móvil las recorta y aquí se guardan en Drive) ----------
+   En la hoja la pose queda como f:"gd:<idDelArchivo>" y el juego la pide con la acción pjImg. */
+const POSE_DEF = [
+  { k: 'base', g: 1, tag: ['sonrie'] },
+  { k: 'selfie', g: 1, tag: ['sonrie'] },
+  { k: 'baile', g: 1, tag: ['sonrie'] },
+  { k: 'salto', g: 1, tag: ['sonrie', 'accion'], air: 1 },
+  { k: 'gafas', g: 1, tag: ['gafas'] },
+  { k: 'perfil', g: .85, tag: ['perfil'] },
+  { k: 'corre', g: .8, tag: ['accion'], run: 1 },
+  { k: 'drama', g: .7, tag: ['drama'], h: .95 },
+  { k: 'aburrido', g: .65, tag: ['drama'] },
+  { k: 'espalda', g: .6, tag: ['espalda'] }
+];
+function carpetaPj_(id) {
+  const props = PropertiesService.getScriptProperties(), rid = props.getProperty('carpetaPj');
+  let raiz = null;
+  try { if (rid) raiz = DriveApp.getFolderById(rid); } catch (e) {}
+  if (!raiz) { raiz = DriveApp.createFolder('PAPARAZZI personajes'); props.setProperty('carpetaPj', raiz.getId()); }
+  const it = raiz.getFoldersByName(id);
+  return it.hasNext() ? it.next() : raiz.createFolder(id);
+}
+function admPose_(d) {
+  esAdm_(d);
+  const P = pjTodos_().find(x => x.id === String(d.id));
+  if (!P) return { ok: false, error: 'Personaje no encontrado' };
+  const k = String(d.k || '').replace(/[^a-z0-9]/g, '').slice(0, 12) || 'pose';
+  const b64 = String(d.b64 || '').replace(/^data:image\/png;base64,/, '');
+  if (b64.length < 100 || b64.length > 6000000) return { ok: false, error: 'Imagen no válida' };
+  const blob = Utilities.newBlob(Utilities.base64Decode(b64), 'image/png', P.id + '_' + k + '_' + Date.now() + '.png');
+  const f = carpetaPj_(P.id).createFile(blob);
+  return { ok: true, f: 'gd:' + f.getId() };
+}
+function admPoses_(d) {
+  esAdm_(d); pjLimpiaCache_();
+  const P = pjTodos_().find(x => x.id === String(d.id));
+  if (!P) return { ok: false, error: 'Personaje no encontrado' };
+  const poses = [];
+  (Array.isArray(d.poses) ? d.poses : []).slice(0, 15).forEach(x => {
+    const f = String(x && x.f || ''), k = String(x && x.k || '').replace(/[^a-z0-9]/g, '').slice(0, 12);
+    if (!/^gd:[\w-]{10,}$/.test(f)) return;
+    const def = POSE_DEF.find(p => p.k === k) || { k: k || 'pose', g: .85, tag: [] };
+    poses.push(Object.assign({}, def, { f }));
+  });
+  if (!poses.length) return { ok: false, error: 'No hay poses para guardar' };
+  // las imágenes antiguas de Drive que ya no se usan van a la papelera
+  const nuevas = poses.map(p => p.f);
+  P.poses.forEach(p => { if (/^gd:/.test(p.f) && nuevas.indexOf(p.f) < 0) { try { DriveApp.getFileById(p.f.slice(3)).setTrashed(true); } catch (e) {} } });
+  const icon = (poses.find(p => p.k === 'selfie') || poses[0]).f;
+  hojaPj_().getRange(P.fila, 4, 1, 2).setValues([[icon, JSON.stringify(poses)]]);
+  pjLimpiaCache_();
+  return admLista_(d);
+}
+function pjImg_(d) {
+  const id = String(d.id || '').replace(/[^\w-]/g, ''), f = 'gd:' + id;
+  // solo se sirven imágenes que sean poses de algún personaje
+  if (!id || !pjTodos_().some(P => P.icon === f || P.poses.some(p => p.f === f))) return { ok: false, error: 'Imagen no encontrada' };
+  return { ok: true, b64: Utilities.base64Encode(DriveApp.getFileById(id).getBlob().getBytes()) };
+}
+function autorizarDrive() { DriveApp.getRootFolder(); }

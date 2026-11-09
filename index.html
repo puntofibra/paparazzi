@@ -252,6 +252,15 @@ body.inGame .pTop{padding-right:62px}
 .aRow .cd{font:400 20px Bungee;color:var(--yellow);letter-spacing:2px}
 .aRow.off{opacity:.5}
 .aBtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ppPick{display:block;text-align:center;cursor:pointer}
+.ppMsg{font-size:13px;font-weight:800;text-align:center;margin:10px 0;color:var(--yellow)}.ppMsg.err{color:#ff6b8a}.ppMsg:empty{display:none}
+.ppGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.ppT{border-radius:12px;padding:6px 4px 4px;text-align:center;border:1px solid var(--line);background:repeating-conic-gradient(#3a2a4a 0 25%,#2a1d38 0 50%) 0 0/16px 16px}
+.ppT img{width:100%;height:120px;object-fit:contain;display:block;touch-action:manipulation}
+.ppT.brr img{cursor:crosshair;outline:2px dashed var(--yellow);outline-offset:-2px;border-radius:8px}
+.ppT span{display:block;font-size:11px;font-weight:800;margin-top:4px}
+.ppTools{display:flex;gap:6px;margin-top:10px}.ppTools button{flex:1;font-size:12px;font-weight:800;padding:9px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
+.ppTools button.on{background:var(--yellow);color:#3a1a00}.ppTools button:disabled{opacity:.4}
 .aBtns button{font-size:12px;font-weight:800;padding:6px 9px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
 .aBtns button.red{border-color:#ff5577;color:#ff8aa0}
 .mPrompt{width:100%;box-sizing:border-box;height:46vh;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:#e6d6ff;font:500 12px/1.45 ui-monospace,monospace;padding:10px;resize:none}
@@ -449,7 +458,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.8';
+const VERSION = '2026-11-09.9';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -581,6 +590,32 @@ const ENCARGOS = [
 ];
 const encTxt = e => e.t.replace(/\{pj\}/g, PJ.n);
 
+/* ---------- imágenes de personajes subidas desde el panel admin (guardadas en Drive: "gd:<id>") ---------- */
+const GD = {}, GDP = {};
+function gdUrl(f){
+  f = String(f).split('?')[0];
+  if (GD[f]) return Promise.resolve(GD[f]);
+  if (GDP[f]) return GDP[f];
+  const id = f.slice(3), key = location.origin + '/__gd/' + id;
+  return GDP[f] = (async () => {
+    let blob = null;
+    try{ const c = await caches.open('pz-gd'); const r = await c.match(key); if (r) blob = await r.blob(); }catch(e){}
+    if (!blob){
+      const r = await api('pjImg', { id }, 30000);
+      if (!r || !r.ok || !r.b64){ delete GDP[f]; throw new Error('img'); }
+      const bin = atob(r.b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      blob = new Blob([u8], { type: 'image/png' });
+      try{ const c = await caches.open('pz-gd'); await c.put(key, new Response(blob, { headers: { 'Content-Type': 'image/png' } })); }catch(e){}
+    }
+    return GD[f] = URL.createObjectURL(blob);
+  })();
+}
+function gdFix(im){ const s = im.getAttribute('src') || ''; if (s.indexOf('gd:') !== 0) return; im.removeAttribute('src'); gdUrl(s).then(u => { im.src = u; }).catch(() => {}); }
+new MutationObserver(ms => ms.forEach(m => {
+  if (m.type === 'attributes'){ if (m.target.tagName === 'IMG') gdFix(m.target); return; }
+  m.addedNodes.forEach(n => { if (n.nodeType !== 1) return; if (n.tagName === 'IMG') gdFix(n); else if (n.querySelectorAll) n.querySelectorAll('img[src^="gd:"]').forEach(gdFix); });
+})).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src'] });
+
 /* ---------- carga de imágenes ---------- */
 const IMG = {};
 let loaded = 0, toLoad = 0;
@@ -589,7 +624,8 @@ function loadImg(src, cb){
   const im = new Image();
   im.onload = () => { IMG[src] = im; loaded++; loadProgress(); cb && cb(im); };
   im.onerror = () => { loaded++; loadProgress(); };
-  im.src = src + '?v=' + VERSION;
+  if (String(src).indexOf('gd:') === 0) gdUrl(src).then(u => { im.src = u; }).catch(() => { loaded++; loadProgress(); });
+  else im.src = src + '?v=' + VERSION;
 }
 function loadProgress(){ const p = toLoad ? loaded / toLoad : 1; const b = document.querySelector('#loadBar i'); if (b) b.style.width = (p * 100) + '%'; if (p >= 1) setTimeout(() => { const lb = $('loadBar'); if (lb) lb.style.opacity = 0; }, 400); }
 function loadAll(){
@@ -1169,7 +1205,7 @@ async function panelAdmin(){
 function pintaAdmin(){
   const rows = ADMPJ.map(p => `<div class="aRow ${p.activo ? '' : 'off'}">${p.icon ? `<img src="${p.icon}" alt="">` : '<div class="ph">👤</div>'}
     <div class="nm"><b>${esc(p.n)}</b><small>${p.nPoses ? p.nPoses + ' poses' : '⚠️ sin imágenes todavía'}${p.activo ? '' : ' · DESACTIVADO'}</small>
-      <div class="aBtns"><button data-a="ren" data-id="${p.id}">✏️ Nombre</button><button data-a="cod" data-id="${p.id}">🔄 Código</button><button data-a="act" data-id="${p.id}">${p.activo ? '🚫 Desactivar' : '✅ Activar'}</button><button class="red" data-a="del" data-id="${p.id}">🗑️</button></div></div>
+      <div class="aBtns"><button data-a="pos" data-id="${p.id}">📷 Poses</button><button data-a="ren" data-id="${p.id}">✏️ Nombre</button><button data-a="cod" data-id="${p.id}">🔄 Código</button><button data-a="act" data-id="${p.id}">${p.activo ? '🚫 Desactivar' : '✅ Activar'}</button><button class="red" data-a="del" data-id="${p.id}">🗑️</button></div></div>
     <div class="cd" data-a="copy" data-c="${p.code}">${p.code}</div></div>`).join('');
   const m = modal(`<h3>🔑 PANEL ADMIN</h3><p class="mSub">Personajes con código · Jorge es fijo y lo tiene todo el mundo. Toca un código para copiarlo.</p>
     <button class="btn y" id="apPrompt">📝 PROMPT</button>
@@ -1178,15 +1214,16 @@ function pintaAdmin(){
   m.querySelector('#apNo').onclick = cerrarModal;
   m.querySelector('#apOut').onclick = () => { ADM = ''; try{ sessionStorage.removeItem('pz_adm'); }catch(e){} cerrarModal(); toast('Sesión de admin cerrada', 'info'); };
   m.querySelector('#apPrompt').onclick = verPrompt;
-  m.querySelector('#apNew').onclick = async () => { const n = await pedirTexto('➕ NUEVO PERSONAJE', 'Nombre del personaje (solo lo ves tú). Luego pásame sus imágenes por el chat.', ''); if (!n) return pintaAdmin(); try{ ADMPJ = (await adm('admGuardar', { n, code: 'NUEVO' })).pjs; toast('✅ Personaje creado', 'ok'); }catch(e){} pintaAdmin(); };
+  m.querySelector('#apNew').onclick = async () => { const n = await pedirTexto('➕ NUEVO PERSONAJE', 'Nombre del personaje (solo lo ves tú). Después subes la imagen con sus 10 poses.', ''); if (!n) return pintaAdmin(); try{ const antes = ADMPJ.map(x => x.id); ADMPJ = (await adm('admGuardar', { n, code: 'NUEVO' })).pjs; toast('✅ Personaje creado', 'ok'); const nuevo = ADMPJ.find(x => antes.indexOf(x.id) < 0); if (nuevo) return verPoses(nuevo.id); }catch(e){} pintaAdmin(); };
   m.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
     const p = ADMPJ.find(x => x.id === b.dataset.id), a = b.dataset.a;
     if (a === 'copy'){ copiar(b.dataset.c); return; }
+    if (a === 'pos'){ verPoses(p.id); return; }
     try{
       if (a === 'ren'){ const n = await pedirTexto('✏️ CAMBIAR NOMBRE', '', p.n); if (n) ADMPJ = (await adm('admGuardar', { id: p.id, n })).pjs; }
       else if (a === 'cod'){ if (await confirmar('¿Código nuevo para ' + p.n + '?', 'El código ' + p.code + ' dejará de valer para quien no lo haya metido aún. Quien ya lo tenga lo perderá.', 'SÍ, CAMBIAR')) ADMPJ = (await adm('admGuardar', { id: p.id, code: 'NUEVO' })).pjs; }
       else if (a === 'act') ADMPJ = (await adm('admGuardar', { id: p.id, activo: !p.activo })).pjs;
-      else if (a === 'del'){ if (await confirmar('¿Borrar a ' + p.n + '?', 'Desaparecerá para todos los que lo tengan. Las imágenes se quedan en GitHub.', 'SÍ, BORRAR')) ADMPJ = (await adm('admBorrar', { id: p.id })).pjs; }
+      else if (a === 'del'){ if (await confirmar('¿Borrar a ' + p.n + '?', 'Desaparecerá para todos los que lo tengan.', 'SÍ, BORRAR')) ADMPJ = (await adm('admBorrar', { id: p.id })).pjs; }
     }catch(e){}
     pintaAdmin();
   });
@@ -1205,11 +1242,200 @@ async function copiar(t){
   SFX.ding(); toast('📋 Copiado', 'ok', 1500);
 }
 function verPrompt(){
-  const m = modal(`<h3>📝 PROMPT PARA GEMINI</h3><p class="mSub">Sube a Gemini la foto de la persona y pega este texto. Saca las 10 poses en una imagen; recorta el fondo y pásamela por el chat.</p>
+  const m = modal(`<h3>📝 PROMPT PARA GEMINI</h3><p class="mSub">Sube a Gemini la foto de la persona y pega este texto. Saca las 10 poses en una imagen y súbela con el botón 📷 Poses del personaje (no hace falta quitarle el fondo).</p>
     <textarea class="mPrompt" readonly id="prTx"></textarea><button class="btn y" id="prCp">📋 COPIAR PROMPT</button><button class="btn alt" id="prBk">⬅️ VOLVER</button>`);
   m.querySelector('#prTx').value = PROMPT_POSES;
   m.querySelector('#prCp').onclick = () => copiar(PROMPT_POSES);
   m.querySelector('#prBk').onclick = pintaAdmin;
+}
+
+/* ---------- recorte de poses en el propio móvil (imagen de Gemini con fondo blanco o ya sin fondo) ---------- */
+const POSE_K = ['base', 'selfie', 'baile', 'salto', 'gafas', 'perfil', 'corre', 'drama', 'aburrido', 'espalda'];
+const POSE_N = ['De pie', 'Selfie', 'Bailando', 'Saltando', 'Gafas', 'Perfil', 'Corriendo', 'Llorando', 'Aburrido', 'De espaldas'];
+const UMBRAL_BLANCO = 225;
+function lienzo(w, h){ const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function ctx2(c){ return c.getContext('2d', { willReadFrequently: true }); }
+function achica(c, maxH){
+  if (c.height <= maxH) return c;
+  const k = maxH / c.height, o = lienzo(Math.max(1, Math.round(c.width * k)), maxH), x = o.getContext('2d');
+  x.imageSmoothingQuality = 'high'; x.drawImage(c, 0, 0, o.width, o.height); return o;
+}
+// quita el blanco conectado al punto/borde y suaviza el filo para que no quede halo blanco
+function quitaBlanco(d, W, H, semillas){
+  const N = W * H, bg = new Uint8Array(N), st = new Int32Array(N); let sp = 0;
+  const isW = i => { const o = i * 4; return d[o + 3] > 0 && Math.min(d[o], d[o + 1], d[o + 2]) >= UMBRAL_BLANCO; };
+  const push = i => { if (!bg[i] && isW(i)){ bg[i] = 1; st[sp++] = i; } };
+  semillas.forEach(push);
+  while (sp){ const i = st[--sp], X = i % W; if (X > 0) push(i - 1); if (X < W - 1) push(i + 1); if (i >= W) push(i - W); if (i < N - W) push(i + W); }
+  let n = 0;
+  for (let i = 0; i < N; i++){
+    if (bg[i]){ d[i * 4 + 3] = 0; n++; continue; }
+    const X = i % W;
+    if ((X > 0 && bg[i - 1]) || (X < W - 1 && bg[i + 1]) || (i >= W && bg[i - W]) || (i < N - W && bg[i + W])){
+      const o = i * 4, l = Math.min(d[o], d[o + 1], d[o + 2]);
+      if (l > 140) d[o + 3] = Math.min(d[o + 3], Math.round((255 - l) / 115 * 255));
+    }
+  }
+  return n;
+}
+// huecos blancos encerrados (entre brazo y cabeza, entre las piernas…): se quitan si están rodeados
+// del contorno negro grueso; los dientes y el blanco de los ojos no, porque alrededor tienen labios/piel
+function quitaHuecos(d, W, H){
+  const N = W * H, k = W / 2048, r = Math.max(3, Math.round(5 * k)), minA = Math.max(20, Math.round(60 * k * k));
+  const blanco = i => { const o = i * 4; return d[o + 3] === 255 && Math.min(d[o], d[o + 1], d[o + 2]) >= UMBRAL_BLANCO; };
+  const vis = new Uint8Array(N), q = new Int32Array(N), dist = new Int16Array(N).fill(-1);
+  for (let s = 0; s < N; s++){
+    if (vis[s] || !blanco(s)) continue;
+    let h = 0, t = 0, suma = 0; q[t++] = s; vis[s] = 1;
+    while (h < t){ const i = q[h++], X = i % W, o = i * 4; suma += Math.min(d[o], d[o + 1], d[o + 2]);
+      const nb = [X > 0 ? i - 1 : -1, X < W - 1 ? i + 1 : -1, i >= W ? i - W : -1, i < N - W ? i + W : -1];
+      for (const m of nb) if (m >= 0 && !vis[m] && blanco(m)){ vis[m] = 1; q[t++] = m; } }
+    if (t < minA || suma / t < 240) continue;
+    // anillo a distancia r-1..r del hueco: ¿casi todo contorno negro?
+    const comp = q.slice(0, t), toc = []; let h2 = 0, ring = 0, osc = 0;
+    const cola = Array.from(comp); comp.forEach(i => { dist[i] = 0; toc.push(i); });
+    while (h2 < cola.length){ const i = cola[h2++], dv = dist[i]; if (dv >= r) continue; const X = i % W;
+      const nb = [X > 0 ? i - 1 : -1, X < W - 1 ? i + 1 : -1, i >= W ? i - W : -1, i < N - W ? i + W : -1];
+      for (const m of nb) if (m >= 0 && dist[m] < 0){ dist[m] = dv + 1; toc.push(m); cola.push(m);
+        if (dv + 1 >= r - 1){ ring++; const o = m * 4; if (d[o + 3] > 0 && (d[o] + d[o + 1] + d[o + 2]) / 3 < 70) osc++; } } }
+    toc.forEach(i => dist[i] = -1);
+    if (ring && osc / ring >= .85) quitaBlanco(d, W, H, [s]);
+  }
+}
+function recortarPoses(img){
+  let W = img.naturalWidth || img.width, H = img.naturalHeight || img.height;
+  const sc = Math.min(1, 2400 / W); W = Math.round(W * sc); H = Math.round(H * sc);
+  const cv = lienzo(W, H), x = ctx2(cv); x.drawImage(img, 0, 0, W, H);
+  const id = x.getImageData(0, 0, W, H), d = id.data, N = W * H;
+  // ¿ya viene sin fondo? entonces no se toca nada, solo se separa
+  let tr = 0, mu = 0; for (let i = 3; i < d.length; i += 40){ mu++; if (d[i] < 250) tr++; }
+  const sinFondo = tr / mu > .05;
+  if (!sinFondo){
+    const s = []; for (let X = 0; X < W; X++) s.push(X, (H - 1) * W + X); for (let Y = 0; Y < H; Y++) s.push(Y * W, Y * W + W - 1);
+    quitaBlanco(d, W, H, s); quitaHuecos(d, W, H); x.putImageData(id, 0, 0);
+  }
+  // figuras = manchas separadas (rejilla gruesa para ir rápido en el móvil)
+  const S = Math.max(2, Math.round(W / 500)), gw = Math.ceil(W / S), gh = Math.ceil(H / S), G = gw * gh;
+  const g = new Uint8Array(G);
+  for (let Y = 0; Y < H; Y++){ const r = ((Y / S) | 0) * gw; for (let X = 0; X < W; X++) if (d[(Y * W + X) * 4 + 3] > 20) g[r + ((X / S) | 0)] = 1; }
+  const R = 3, gd = new Uint8Array(G);
+  for (let y = 0; y < gh; y++) for (let xx = 0; xx < gw; xx++) if (g[y * gw + xx])
+    for (let dy = -R; dy <= R; dy++){ const yy = y + dy; if (yy < 0 || yy >= gh) continue; for (let dx = -R; dx <= R; dx++){ const x2 = xx + dx; if (x2 >= 0 && x2 < gw) gd[yy * gw + x2] = 1; } }
+  const lab = new Int32Array(G), q = new Int32Array(G), comps = []; let nl = 0;
+  for (let s = 0; s < G; s++){
+    if (!gd[s] || lab[s]) continue;
+    nl++; let h = 0, t = 0; q[t++] = s; lab[s] = nl;
+    const c = { l: nl, n: 0, x0: 1e9, y0: 1e9, x1: -1, y1: -1 };
+    while (h < t){
+      const k = q[h++], cx = k % gw, cy = (k / gw) | 0;
+      if (g[k]){ c.n++; if (cx < c.x0) c.x0 = cx; if (cx > c.x1) c.x1 = cx; if (cy < c.y0) c.y0 = cy; if (cy > c.y1) c.y1 = cy; }
+      if (cx > 0 && gd[k - 1] && !lab[k - 1]){ lab[k - 1] = nl; q[t++] = k - 1; }
+      if (cx < gw - 1 && gd[k + 1] && !lab[k + 1]){ lab[k + 1] = nl; q[t++] = k + 1; }
+      if (cy > 0 && gd[k - gw] && !lab[k - gw]){ lab[k - gw] = nl; q[t++] = k - gw; }
+      if (cy < gh - 1 && gd[k + gw] && !lab[k + gw]){ lab[k + gw] = nl; q[t++] = k + gw; }
+    }
+    if (c.n) comps.push(c);
+  }
+  if (!comps.length) return { poses: [], sinFondo };
+  comps.sort((a, b) => b.n - a.n);
+  const sel = comps.filter(c => c.n >= comps[0].n * .15).slice(0, 10);
+  // orden de lectura: filas de arriba abajo y cada fila de izquierda a derecha
+  const altoMed = sel.reduce((a, c) => a + (c.y1 - c.y0), 0) / sel.length;
+  sel.forEach(c => { c.cy = (c.y0 + c.y1) / 2; c.cx = (c.x0 + c.x1) / 2; });
+  sel.sort((a, b) => a.cy - b.cy);
+  let fila = 0, ref = sel[0].cy; sel.forEach(c => { if (c.cy - ref > altoMed * .5){ fila++; ref = c.cy; } c.fila = fila; });
+  sel.sort((a, b) => a.fila - b.fila || a.cx - b.cx);
+  const poses = sel.map(c => {
+    const X0 = c.x0 * S, Y0 = c.y0 * S, X1 = Math.min(W, (c.x1 + 1) * S), Y1 = Math.min(H, (c.y1 + 1) * S), w = X1 - X0, h = Y1 - Y0;
+    const pc = lienzo(w, h), px = ctx2(pc), src = x.getImageData(X0, Y0, w, h).data, pd = px.createImageData(w, h);
+    for (let y = 0; y < h; y++){ const r = (((Y0 + y) / S) | 0) * gw; for (let xx = 0; xx < w; xx++){
+      if (lab[r + (((X0 + xx) / S) | 0)] !== c.l) continue;
+      const o = (y * w + xx) * 4; pd.data[o] = src[o]; pd.data[o + 1] = src[o + 1]; pd.data[o + 2] = src[o + 2]; pd.data[o + 3] = src[o + 3];
+    } }
+    px.putImageData(pd, 0, 0);
+    return achica(pc, 720);
+  });
+  return { poses, sinFondo };
+}
+// tocar un hueco blanco que se ha quedado (entre brazo y cuerpo, entre las piernas…) para hacerlo transparente
+function borrarHueco(pc, X, Y){
+  const x = ctx2(pc), id = x.getImageData(0, 0, pc.width, pc.height), d = id.data, W = pc.width, H = pc.height;
+  X = Math.max(0, Math.min(W - 1, Math.round(X))); Y = Math.max(0, Math.min(H - 1, Math.round(Y)));
+  // busca el píxel blanco más cercano en un radio pequeño (el dedo no es preciso)
+  let sem = -1;
+  for (let r = 0; r <= 14 && sem < 0; r++) for (let dy = -r; dy <= r && sem < 0; dy++) for (let dx = -r; dx <= r; dx++){
+    const xx = X + dx, yy = Y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+    const o = (yy * W + xx) * 4; if (d[o + 3] > 0 && Math.min(d[o], d[o + 1], d[o + 2]) >= UMBRAL_BLANCO){ sem = yy * W + xx; break; }
+  }
+  if (sem < 0) return 0;
+  const n = quitaBlanco(d, W, H, [sem]); x.putImageData(id, 0, 0); return n;
+}
+
+/* ---------- panel admin: subir la imagen de las 10 poses desde el móvil ---------- */
+function verPoses(pid){
+  const p = ADMPJ.find(x => x.id === pid); if (!p) return pintaAdmin();
+  let poses = [], borrar = false, hist = [];
+  const m = modal(`<h3>📷 POSES DE ${esc(p.n.toUpperCase())}</h3>
+    <p class="mSub">Elige la imagen de Gemini con las 10 poses, con fondo blanco o ya sin fondo. Se recorta sola aquí mismo.</p>
+    <label class="btn y ppPick">📁 ELEGIR IMAGEN<input type="file" accept="image/*" id="ppFile" hidden></label>
+    <div id="ppMsg" class="ppMsg"></div><div id="ppGrid" class="ppGrid"></div>
+    <div id="ppTools" class="ppTools" style="display:none"><button id="ppBorrar">🧽 Borrar huecos blancos: NO</button><button id="ppUndo">↩️ Deshacer</button></div>
+    <button class="btn c" id="ppOk" style="display:none">💾 GUARDAR POSES</button><button class="btn alt" id="ppNo">⬅️ VOLVER</button>`);
+  const msg = (t, err) => { const e = m.querySelector('#ppMsg'); e.textContent = t; e.classList.toggle('err', !!err); };
+  const pinta = () => {
+    const gEl = m.querySelector('#ppGrid'); gEl.innerHTML = '';
+    poses.forEach((c, i) => {
+      const t = document.createElement('div'); t.className = 'ppT' + (borrar ? ' brr' : '');
+      const im = new Image(); im.src = c.toDataURL('image/png'); t.appendChild(im);
+      const s = document.createElement('span'); s.textContent = (i + 1) + ' · ' + (POSE_N[i] || 'Extra'); t.appendChild(s);
+      im.onclick = ev => {
+        if (!borrar) return;
+        const r = im.getBoundingClientRect(), k = Math.min(r.width / c.width, r.height / c.height);
+        const ox = r.left + (r.width - c.width * k) / 2, oy = r.top + (r.height - c.height * k) / 2;
+        const copia = lienzo(c.width, c.height); copia.getContext('2d').drawImage(c, 0, 0);
+        const n = borrarHueco(c, (ev.clientX - ox) / k, (ev.clientY - oy) / k);
+        if (n){ hist.push({ i, c: copia }); SFX.pop(); pinta(); } else toast('Toca justo encima de la zona blanca', 'info', 1800);
+      };
+      gEl.appendChild(t);
+    });
+    m.querySelector('#ppTools').style.display = poses.length ? '' : 'none';
+    m.querySelector('#ppOk').style.display = poses.length ? '' : 'none';
+    m.querySelector('#ppBorrar').textContent = '🧽 Borrar huecos blancos: ' + (borrar ? 'SÍ' : 'NO');
+    m.querySelector('#ppBorrar').classList.toggle('on', borrar);
+    m.querySelector('#ppUndo').disabled = !hist.length;
+  };
+  m.querySelector('#ppNo').onclick = pintaAdmin;
+  m.querySelector('#ppBorrar').onclick = () => { borrar = !borrar; pinta(); if (borrar) toast('Toca los trozos blancos que sobren dentro de cada pose', 'info', 2600); };
+  m.querySelector('#ppUndo').onclick = () => { const h = hist.pop(); if (h){ poses[h.i] = h.c; pinta(); } };
+  m.querySelector('#ppFile').onchange = async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    msg('✂️ Recortando…'); poses = []; hist = []; pinta();
+    try{
+      const url = URL.createObjectURL(f), im = new Image(); im.src = url; await im.decode();
+      await new Promise(r => setTimeout(r, 30));
+      const r = recortarPoses(im); URL.revokeObjectURL(url);
+      poses = r.poses;
+      if (!poses.length) msg('No he encontrado ninguna figura en la imagen', true);
+      else if (poses.length !== 10) msg('⚠️ He encontrado ' + poses.length + ' figuras y esperaba 10. Puede que dos poses se toquen; si no te convence, pide a Gemini que las separe más.', true);
+      else msg('✅ 10 poses ' + (r.sinFondo ? 'separadas (la imagen ya venía sin fondo)' : 'recortadas') + '. Si queda algún hueco blanco, activa 🧽 y tócalo.');
+    }catch(err){ msg('No pude abrir esa imagen', true); }
+    pinta(); e.target.value = '';
+  };
+  m.querySelector('#ppOk').onclick = async () => {
+    const b = m.querySelector('#ppOk'); if (b.disabled) return; b.disabled = true;
+    const subidas = [];
+    try{
+      for (let i = 0; i < poses.length; i++){
+        b.textContent = '⏫ SUBIENDO ' + (i + 1) + '/' + poses.length + '…';
+        const r = await adm('admPose', { id: pid, k: POSE_K[i] || ('extra' + i), b64: poses[i].toDataURL('image/png').split(',')[1] });
+        subidas.push({ k: POSE_K[i] || ('extra' + i), f: r.f });
+      }
+      b.textContent = '💾 GUARDANDO…';
+      ADMPJ = (await adm('admPoses', { id: pid, poses: subidas })).pjs;
+      SFX.ding(); toast('✅ ' + p.n + ' ya tiene sus ' + subidas.length + ' poses', 'ok', 3500);
+      pintaAdmin();
+    }catch(err){ b.disabled = false; b.textContent = '💾 GUARDAR POSES'; }
+  };
 }
 
 // botón ✕ de salir: visible siempre que estés dentro de una partida
