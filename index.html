@@ -464,7 +464,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.15';
+const VERSION = '2026-11-10.1';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -2120,11 +2120,27 @@ function homeJorge(){
 }
 setInterval(homeJorge, 1800);
 
-// versión fresca
-async function checkUpdate(){
-  try{ const j = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()); if (j.v && j.v !== VERSION && (!ST || ST.fase === 'lobby' || ST.fase === 'final') && new URLSearchParams(location.search).get('r') !== j.v){ const u = new URL(location.href); u.searchParams.set('r', j.v); location.replace(u.toString()); } }catch(e){}
+// versión fresca: la app se actualiza sola cuando subimos cambios (sin refrescar ni cerrarla)
+let NUEVA = '';
+const puedoRecargar = () => (!ST || ST.fase === 'lobby' || ST.fase === 'final') && !$('mDlg').classList.contains('on') && !document.hidden;
+function aplicaUpdate(){
+  if (!NUEVA || NUEVA === VERSION || !puedoRecargar()) return;
+  // por si el navegador aún da la versión vieja: como mucho 3 intentos por versión
+  let n = 0; try{ n = Number(sessionStorage.getItem('upd_' + NUEVA) || 0); sessionStorage.setItem('upd_' + NUEVA, String(n + 1)); }catch(e){}
+  if (n >= 3) return;
+  toast('🔄 Actualizando a la última versión…', 'info', 1500);
+  const u = new URL(location.href); u.searchParams.set('r', NUEVA + (n ? '.' + n : ''));
+  setTimeout(() => location.replace(u.toString()), 900);
 }
-setInterval(checkUpdate, 60000); setTimeout(checkUpdate, 4000);
+async function checkUpdate(){
+  try{ const j = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()); if (j.v && j.v !== VERSION){ NUEVA = j.v; aplicaUpdate(); } }catch(e){}
+}
+setInterval(checkUpdate, 30000); setTimeout(checkUpdate, 3000);
+// al volver a la app (desde segundo plano o con la pantalla encendida) se mira enseguida
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+addEventListener('focus', checkUpdate); addEventListener('pageshow', checkUpdate);
+// si llegó una versión nueva en mitad de una partida o con una ventana abierta, se aplica en cuanto se pueda
+setInterval(aplicaUpdate, 3000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
 loadAll(); homeJorge(); cargarMisPj(); cargarPrecio();
