@@ -464,7 +464,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-10.3';
+const VERSION = '2026-11-10.4';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -584,18 +584,19 @@ INTRUSOS.forEach((x, i) => x.f = INTRUSOS_OK.includes(i + 1) ? 'intrusos/' + Str
 
 /* ---------- encargos de la revista ---------- */
 const ENCARGOS = [
-  { k: 'portada', t: 'PORTADA: {pj} sonriendo a cámara', ok: s => s.pose.tag.includes('sonrie') && s.q >= 45 },
-  { k: 'cotilleo', t: 'COTILLEO: pilla a {pj} con cara de drama', ok: s => s.pose.tag.includes('drama') && s.headVis },
-  { k: 'photobomb', t: 'PHOTOBOMB: {pj} con un intruso en la foto (sin taparle)', ok: s => s.intrIn && s.occ < .3 && s.fv > .6 },
-  { k: 'espalda', t: 'MISTERIO: {pj} de espaldas', ok: s => s.pose.k === 'espalda' && s.fv > .6 },
-  { k: 'accion', t: 'ACCIÓN: {pj} corriendo, saltando o volando', ok: s => s.pose.tag.includes('accion') && s.fv > .6 },
-  { k: 'primer', t: 'PRIMER PLANO: que se vea su cara enorme', ok: s => s.headVis && s.sr > 1.25 && s.blur < 3 },
-  { k: 'perfil', t: 'MODELO: {pj} de perfil', ok: s => s.pose.tag.includes('perfil') && s.fv > .6 },
-  { k: 'cruz', t: 'DIVINO: {pj} besando su cruz', ok: s => s.pose.k === 'cruz' && s.headVis },
-  { k: 'gafas', t: '¿PERDONA?: {pj} bajándose las gafas', ok: s => s.pose.k === 'gafas' && s.headVis },
-  { k: 'entero', t: 'CUERPO ENTERO: de la cabeza a los pies', ok: s => s.fv > .97 && s.blur < 3 && s.occ < .1 }
+  { k: 'portada', v: 'Encargo de portada: saca a {pj} sonriendo a cámara.', t: 'PORTADA: {pj} sonriendo a cámara', ok: s => s.pose.tag.includes('sonrie') && s.q >= 45 },
+  { k: 'cotilleo', v: 'Encargo de cotilleo: pilla a {pj} con cara de drama.', t: 'COTILLEO: pilla a {pj} con cara de drama', ok: s => s.pose.tag.includes('drama') && s.headVis },
+  { k: 'photobomb', v: 'Encargo de foto con intruso: saca a {pj} con alguien que se cuele, pero sin que le tape.', t: 'PHOTOBOMB: {pj} con un intruso en la foto (sin taparle)', ok: s => s.intrIn && s.occ < .3 && s.fv > .6 },
+  { k: 'espalda', v: 'Encargo misterio: saca a {pj} de espaldas.', t: 'MISTERIO: {pj} de espaldas', ok: s => s.pose.k === 'espalda' && s.fv > .6 },
+  { k: 'accion', v: 'Encargo de acción: pilla a {pj} corriendo, saltando o volando.', t: 'ACCIÓN: {pj} corriendo, saltando o volando', ok: s => s.pose.tag.includes('accion') && s.fv > .6 },
+  { k: 'primer', v: 'Encargo de primer plano: haz zoom hasta que su cara se vea enorme.', t: 'PRIMER PLANO: que se vea su cara enorme', ok: s => s.headVis && s.sr > 1.25 && s.blur < 3 },
+  { k: 'perfil', v: 'Encargo de modelo: saca a {pj} de perfil.', t: 'MODELO: {pj} de perfil', ok: s => s.pose.tag.includes('perfil') && s.fv > .6 },
+  { k: 'cruz', v: 'Encargo divino: pilla a {pj} besando su cruz.', t: 'DIVINO: {pj} besando su cruz', ok: s => s.pose.k === 'cruz' && s.headVis },
+  { k: 'gafas', v: 'Encargo especial: pilla a {pj} bajándose las gafas de sol.', t: '¿PERDONA?: {pj} bajándose las gafas', ok: s => s.pose.k === 'gafas' && s.headVis },
+  { k: 'entero', v: 'Encargo de cuerpo entero: que salga de la cabeza a los pies.', t: 'CUERPO ENTERO: de la cabeza a los pies', ok: s => s.fv > .97 && s.blur < 3 && s.occ < .1 }
 ];
 const encTxt = e => e.t.replace(/\{pj\}/g, PJ.n);
+const encVoz = e => (e.v || e.t).replace(/\{pj\}/g, PJ.n);
 
 /* ---------- imágenes de personajes subidas desde el panel admin (guardadas en Drive: "gd:<id>") ---------- */
 const GD = {}, GDP = {};
@@ -1006,7 +1007,33 @@ function silencioFondo(){ if (!AC) return; try{ if (document.hidden){ if (AC.sta
 document.addEventListener('visibilitychange', silencioFondo);
 addEventListener('pagehide', () => { try{ AC && AC.suspend(); }catch(e){} });
 addEventListener('pageshow', silencioFondo);
-$('bMute').onclick = () => { musicOn = !musicOn; LS.set('snd', musicOn); $('bMute').textContent = musicOn ? '🔊' : '🔇'; initAudio(); };
+$('bMute').onclick = () => { musicOn = !musicOn; LS.set('snd', musicOn); $('bMute').textContent = musicOn ? '🔊' : '🔇'; initAudio(); if (!musicOn) callaNarrador(); };
+/* ---------- narrador: la voz del móvil dice solo lo necesario (encargo de cada ronda, votación y ganadores) ---------- */
+const VOZ = { ok: 'speechSynthesis' in window, v: null, listo: false };
+function vozElegir(){
+  if (!VOZ.ok) return;
+  const vs = speechSynthesis.getVoices(), es = vs.filter(v => /^es[-_]ES/i.test(v.lang));
+  VOZ.v = es.find(v => /google/i.test(v.name)) || es.find(v => /m[oó]nica|jorge|helena|laura|pablo|elvira|alvaro|lucia|dalia/i.test(v.name)) || es[0] || vs.find(v => /^es/i.test(v.lang)) || null;
+}
+if (VOZ.ok){ vozElegir(); try{ speechSynthesis.addEventListener('voiceschanged', vozElegir); }catch(e){} }
+// iPhone solo deja hablar si la primera frase sale de un toque: se "despierta" con el primer toque
+function vozDespierta(){ if (!VOZ.ok || VOZ.listo) return; VOZ.listo = true; try{ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); }catch(e){} }
+addEventListener('click', vozDespierta, true); addEventListener('touchend', vozDespierta, true);
+function callaNarrador(){ if (VOZ.ok) try{ speechSynthesis.cancel(); }catch(e){} if (master && AC) master.gain.setTargetAtTime(.6, AC.currentTime, .1); }
+function narra(txt){
+  if (!VOZ.ok || !musicOn || document.hidden || !txt) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(txt);
+    u.lang = VOZ.v ? VOZ.v.lang : 'es-ES'; if (VOZ.v) u.voice = VOZ.v;
+    u.rate = 1; u.pitch = 1; u.volume = 1;
+    // mientras habla, la música baja para que se le entienda bien
+    u.onstart = () => { if (master && AC) master.gain.setTargetAtTime(.22, AC.currentTime, .08); };
+    u.onend = u.onerror = () => { if (master && AC) master.gain.setTargetAtTime(.6, AC.currentTime, .25); };
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) callaNarrador(); });
 $('bMute').textContent = musicOn ? '🔊' : '🔇';
 
 /* ---------- avisos ---------- */
@@ -1167,10 +1194,10 @@ function editarPj(id){
     if (ST && ST.fase === 'lobby'){ if (isHost() && PJ.id === id) accion('cfg', { rondas: ST.cfg.rondas, dur: ST.cfg.dur, pj: 'jorge' }); screenLobby(); }
   };
 }
-/* ---------- panel admin: 5 toques rápidos en Jorge + llave NFC ---------- */
+/* ---------- panel admin: 10 toques rápidos en Jorge + llave NFC ---------- */
 const PROMPT_POSES = "Usa la foto adjunta como referencia de la persona: misma cara, mismos rasgos, mismo pelo, mismo tono de piel y su ropa o un look parecido. Conviértela en un personaje de caricatura de dibujo animado, con cabeza un poco grande, contorno negro grueso y limpio, colores planos y vivos con sombreado suave dentro de la figura. Es el mismo estilo cartoon que un sticker de WhatsApp de calidad.\n\nDibuja AL MISMO PERSONAJE en 10 poses diferentes, todas en UNA SOLA IMAGEN horizontal, colocadas en una cuadrícula de 2 filas por 5 columnas.\n\nLas 10 poses, en este orden:\n1. De pie, sonriendo de frente con una mano en la cintura y el móvil en la otra mano\n2. Haciéndose un selfie con el brazo estirado, sonrisa enorme\n3. Bailando, muy contento, con los brazos en alto\n4. Saltando en el aire de alegría, con los pies sin tocar el suelo\n5. Bajándose las gafas de sol con un dedo, con cara de chulo\n6. De perfil, mirando hacia un lado\n7. Corriendo de lado, en plena carrera\n8. Llorando de forma dramática, con la mano en la frente\n9. Aburrido, con los brazos caídos y cara de desgana\n10. De espaldas, mirando hacia atrás por encima del hombro\n\nMUY IMPORTANTE para poder recortarlo:\n- Fondo completamente liso de un solo color: blanco puro (#FFFFFF), sin degradados, sin texturas, sin suelo y sin escenario.\n- Cada pose completa de la cabeza a los pies, sin cortar ninguna parte del cuerpo y sin que se salga del cuadro.\n- Mucho espacio vacío entre una pose y otra: que NINGUNA se toque ni se superponga con otra.\n- Todas las poses al mismo tamaño y a la misma escala, con los pies a la misma altura en cada fila.\n- Nada fuera del contorno del personaje: sin sombras en el suelo, sin brillos, sin destellos, sin líneas de movimiento, sin estrellas, sin lágrimas sueltas volando, sin confeti, sin texto, sin números y sin marcos.\n- Contorno negro cerrado y bien definido alrededor de cada figura.";
 let taps = [];
-function tapAdmin(){ const t = Date.now(); taps = taps.filter(x => t - x < 2500); taps.push(t); if (taps.length >= 5){ taps = []; abrirAdmin(); } }
+function tapAdmin(){ const t = Date.now(); taps = taps.filter(x => t - x < 4500); taps.push(t); if (taps.length >= 10){ taps = []; abrirAdmin(); } }
 $('homeJorge').addEventListener('click', tapAdmin);
 let ADM = (() => { try{ return sessionStorage.getItem('pz_adm') || ''; }catch(e){ return ''; } })();
 let nfcCtrl = null, nfcBusy = false;
@@ -1692,6 +1719,7 @@ function screenCapture(prev){
     camReset(); $('tray').innerHTML = ''; $('shots').querySelectorAll('i').forEach(i => i.classList.remove('used'));
     $('plRound').textContent = ST.ronda + '/' + ST.cfg.rondas;
     $('plEnc').querySelector('span').textContent = encTxt(plan(capR).enc);
+    if (now() < ST.t0) narra((ST.ronda >= ST.cfg.rondas ? 'Última ronda. ' : 'Ronda ' + ST.ronda + ' de ' + ST.cfg.rondas + '. ') + encVoz(plan(capR).enc));
     $('plScene').textContent = ESCENAS[capR.esc % ESCENAS.length].n.toUpperCase();
     $('cntTxt').innerHTML = '📰 ' + esc(encTxt(plan(capR).enc)) + '<small>📱 Mueve el móvil para buscar a ' + esc(PJ.n) + ' · 🤏 pellizca para zoom<br>🎯 Toca a ' + esc(PJ.n) + ' para enfocar · ☀️ Ajusta la luz a la derecha<br>🫨 Si mueves el móvil al disparar, ¡sale movida!</small>';
     lastScreen = '';
@@ -1927,7 +1955,7 @@ function runVote(){
     voteRAF = requestAnimationFrame(loop);
     if (!ST || ST.fase !== 'voto'){ cancelAnimationFrame(voteRAF); return; }
     const el = now() - ST.vStart, k = Math.floor(el / SLOT);
-    if (el < 0){ if (voteSlot !== -2){ voteSlot = -2; $('voteStage').innerHTML = '<div class="h1" style="padding:60px 0">🗳️ ¡A VOTAR!</div><p class="sub">Puntúa las fotos de los demás. No sabrás de quién son hasta el final 🤫</p>'; $('vtStars').style.visibility = 'hidden'; $('vtReacts').style.visibility = 'hidden'; SFX.drum(); } return; }
+    if (el < 0){ if (voteSlot !== -2){ voteSlot = -2; narra(ST.ronda === 1 ? '¡A votar! Puntúa las fotos de los demás, sin saber de quién son.' : '¡A votar!'); $('voteStage').innerHTML = '<div class="h1" style="padding:60px 0">🗳️ ¡A VOTAR!</div><p class="sub">Puntúa las fotos de los demás. No sabrás de quién son hasta el final 🤫</p>'; $('vtStars').style.visibility = 'hidden'; $('vtReacts').style.visibility = 'hidden'; SFX.drum(); } return; }
     if (k >= orden.length){ if (voteSlot !== 99){ voteSlot = 99; sendVotes(); $('voteStage').innerHTML = '<div class="h1" style="padding:60px 0">🧮 CONTANDO VOTOS…</div>'; $('vtStars').style.visibility = 'hidden'; $('vtReacts').style.visibility = 'hidden'; } return; }
     $('vtBar').style.width = (100 - (el % SLOT) / SLOT * 100) + '%';
     if (k !== voteSlot){
@@ -1963,6 +1991,8 @@ function screenResults(){
   const L = $('rsList'); L.innerHTML = res.length ? '' : '<p class="sub">Nadie hizo fotos esta ronda 🙈</p>';
   SFX.drum();
   const order = res.slice().reverse();  // de peor a mejor, para dar emoción
+  if (res[0]){ const top = res[0], emp = res[1] && res[1].pts === top.pts, rd = ST.ronda;
+    setTimeout(() => { if (lastScreen === 'res' && resShown === rd) narra(emp ? 'Empate a la mejor foto de la ronda.' : 'La mejor foto de esta ronda es de ' + player(top.id).n + '.'); }, (order.length - 1) * 900 + 1000); }
   order.forEach((x, i) => {
     const p = player(x.id), pos = res.indexOf(x), q = quality(R, x.t / 1000, x.cam);
     const d = document.createElement('div'); d.className = 'resItem'; d.style.setProperty('--pc', p.c); d.style.animationDelay = (i * .9) + 's';
@@ -2083,6 +2113,7 @@ function screenFinal(){
   const A = $('fnAlbum'); A.innerHTML = '';
   (ST.hist || []).forEach((res, i) => { const x = res && res[0]; if (!x) return; const R = R_of(i + 1), p = player(x.id); const d = document.createElement('div'); d.className = 'pol'; d.appendChild(photoCanvas(R, x.t, 300, x.cam)); d.insertAdjacentHTML('beforeend', `<div class="cap">R${i + 1} · 📷 ${esc(p.n)}</div>`); A.appendChild(d); });
   SFX.fanfare(); setTimeout(() => { confetti(220); SFX.cheer(); }, 1300);
+  if (L[0]) setTimeout(() => { if (lastScreen === 'final') narra(L[1] && L[1].pts === L[0].pts ? '¡Fin de la partida! Hay empate en lo más alto.' : '¡Fin de la partida! El mejor paparazzi es ' + L[0].n + ', con ' + L[0].pts + ' puntos.'); }, 2600);
   $('bSaveBest').style.display = myBest() ? '' : 'none';
   const mine = misFotos(), M = $('fnMine'); M.innerHTML = mine.length ? '' : '<p class="sub">No hiciste ninguna foto 🙈</p>';
   mine.forEach((it, i) => { const c = photoCanvas(it.R, it.t, 150, it.cam); if (it.sel) c.className = 'pk'; c.onclick = () => verFoto(mine, i); M.appendChild(c); });
