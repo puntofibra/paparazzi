@@ -458,7 +458,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.11';
+const VERSION = '2026-11-09.12';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -552,7 +552,7 @@ const ESCENAS = [
   { n: 'Ibiza', th: 'beach', sky: ['#ff5e62', '#ffc371'], gr: '#f3d2a2', sunset: 1 }
 ];
 // números de los fondos e intrusos que ya tienen imagen subida
-const FONDOS_OK = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], INTRUSOS_OK = [], LOGO_OK = false;
+const FONDOS_OK = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], INTRUSOS_OK = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], LOGO_OK = false;
 ESCENAS.forEach((e, i) => e.f = FONDOS_OK.includes(i + 1) ? 'fondos/' + String(i + 1).padStart(2, '0') + '.jpg' : '');
 
 /* ---------- intrusos (PNG en intrusos/NN.png; mientras tanto, emoji) ---------- */
