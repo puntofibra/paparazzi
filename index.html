@@ -268,6 +268,24 @@ body.inGame .pTop{padding-right:62px}
 .qBtns .btn{margin:0}
 #qYes{background:linear-gradient(180deg,#ff5577,#e0234a);color:#fff}
 .muteBtn{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;z-index:60;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid var(--line);font-size:18px}
+
+/* promo personaje propio (WhatsApp) */
+.wpOr{display:flex;align-items:center;gap:10px;margin:18px 0 12px;color:var(--mute);font-size:12px;font-weight:800;letter-spacing:2px}
+.wpOr::before,.wpOr::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent)}
+.wpCard{position:relative;border-radius:20px;padding:16px 16px 14px;text-align:center;background:linear-gradient(160deg,rgba(255,45,149,.16),rgba(155,92,255,.14) 55%,rgba(0,229,255,.10));border:1.5px solid rgba(255,45,149,.55);box-shadow:0 0 0 1px rgba(255,255,255,.04) inset,0 10px 30px rgba(255,45,149,.18);overflow:hidden}
+.wpCard::before{content:"";position:absolute;inset:-40% -20% auto auto;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,10,.22),transparent 70%);pointer-events:none}
+.wpTag{display:inline-block;font-family:Bungee;font-size:10px;letter-spacing:1.5px;color:#3a1a00;background:linear-gradient(180deg,#ffe14d,#ffb300);padding:4px 10px;border-radius:999px;box-shadow:0 3px 10px rgba(255,214,10,.35);margin-bottom:8px}
+.wpT{font-family:Bungee;font-size:17px;line-height:1.2;margin:0 0 6px;color:#fff}
+.wpT b{background:var(--ig);-webkit-background-clip:text;background-clip:text;color:transparent}
+.wpD{color:var(--txt);opacity:.85;font-size:13px;line-height:1.4;margin:0 0 12px}
+.wpPrice{display:flex;align-items:baseline;justify-content:center;gap:6px;margin:0 0 12px}
+.wpPrice strong{font-family:Bungee;font-size:30px;color:var(--yellow);text-shadow:0 0 18px rgba(255,214,10,.45)}
+.wpPrice span{color:var(--mute);font-size:12px;font-weight:700}
+.wpBtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px 16px;border-radius:18px;font-family:Bungee;font-size:16px;letter-spacing:.5px;color:#fff;text-decoration:none;background:linear-gradient(180deg,#3ee07a,#1faa52);box-shadow:0 7px 0 #0f6b32,0 10px 26px rgba(37,211,102,.35);position:relative;overflow:hidden;transition:transform .08s,box-shadow .08s}
+.wpBtn:active{transform:translateY(5px);box-shadow:0 2px 0 #0f6b32,0 4px 12px rgba(37,211,102,.3)}
+.wpBtn::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:shine 3.2s infinite}
+.wpBtn svg{width:22px;height:22px;flex:none}
+.wpMini{margin-top:10px;font-size:11px;color:var(--mute)}
 </style>
 </head>
 <body>
@@ -422,7 +440,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.5';
+const VERSION = '2026-11-09.6';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -1025,7 +1043,16 @@ function confirmar(tit, sub, ok){
 function anadirPj(){
   const m = modal(`<h3>➕ AÑADIR PERSONAJE</h3><p class="mSub">Escribe el código de 4 caracteres que te han dado para desbloquear tu personaje personalizado</p>
     <input class="mIn" id="pcIn" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="····"><div class="mErr" id="pcErr"></div>
-    <button class="btn y" id="pcOk">🔓 DESBLOQUEAR</button><button class="btn alt" id="pcNo">CANCELAR</button>`);
+    <button class="btn y" id="pcOk">🔓 DESBLOQUEAR</button>
+    <div class="wpOr">¿NO TIENES CÓDIGO?</div>
+    <div class="wpCard"><div class="wpTag">⭐ EXCLUSIVO</div>
+      <div class="wpT">¿Quieres salir <b>TÚ</b> en el juego?</div>
+      <p class="wpD">Te convertimos en personaje de dibujos animados con 10 poses y te damos tu código para jugar con tus amigos.</p>
+      <div class="wpPrice"><strong>9,95€</strong><span>pago único</span></div>
+      <a class="wpBtn" id="pcWa" href="https://wa.me/34633200100?text=%C2%A1Hola!%20%F0%9F%91%8B%20Quiero%20mi%20personaje%20personalizado%20para%20PAPARAZZI%20%F0%9F%93%B8%20(9%2C95%E2%82%AC).%20%C2%BFQu%C3%A9%20necesit%C3%A1is%20de%20m%C3%AD%20para%20crearlo%3F" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm5.8 14.13c-.24.68-1.42 1.32-1.96 1.36-.5.05-.97.24-3.27-.68-2.77-1.09-4.52-3.93-4.66-4.11-.13-.18-1.11-1.48-1.11-2.82 0-1.34.7-2 .95-2.27.24-.27.53-.34.71-.34l.51.01c.16.01.38-.06.6.46.24.55.79 1.89.86 2.03.07.14.11.3.02.48-.09.18-.14.3-.27.46-.14.16-.29.35-.41.47-.14.14-.28.29-.12.56.16.27.71 1.17 1.52 1.89 1.05.93 1.93 1.22 2.2 1.36.27.14.43.11.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.6-.14.25.09 1.57.74 1.84.88.27.14.45.2.52.32.07.11.07.66-.17 1.33z"/></svg>SOLICITAR MI PERSONAJE</a>
+      <div class="wpMini">Te respondemos por WhatsApp en el momento</div>
+    </div>
+    <button class="btn alt" id="pcNo">CANCELAR</button>`);
   const inp = m.querySelector('#pcIn'); setTimeout(() => inp.focus(), 100);
   inp.oninput = () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); m.querySelector('#pcErr').textContent = ''; };
   m.querySelector('#pcNo').onclick = cerrarModal;
