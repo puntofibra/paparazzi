@@ -229,12 +229,28 @@ input{font-family:inherit}
 .help b{color:var(--yellow)}
 #scrWait .spin{width:60px;height:60px;border-radius:50%;border:6px solid rgba(255,255,255,.1);border-top-color:var(--pink);animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.quitBtn{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;z-index:92;width:40px;height:40px;border-radius:50%;background:rgba(255,45,85,.9);border:2px solid #fff;color:#fff;font-size:18px;font-weight:900;display:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+body.inGame .quitBtn{display:block}
+body.inGame .muteBtn{right:58px}
+body.inGame .pTop{padding-right:62px}
+#qDlg{position:fixed;inset:0;z-index:95;background:rgba(5,2,10,.8);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+#qDlg.on{display:flex}
+.qBox{width:100%;max-width:360px;background:#1f0b33;border:2px solid var(--pink);border-radius:24px;padding:24px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 30px rgba(255,45,149,.3);animation:tIn .35s cubic-bezier(.2,1.5,.4,1) both}
+.qIc{font-size:46px}
+.qT{font-weight:900;font-size:21px;margin:8px 0 6px}
+.qBox p{color:var(--mute);font-size:14px;margin:0 0 16px}
+.qBtns{display:flex;flex-direction:column;gap:10px}
+.qBtns .btn{margin:0}
+#qYes{background:linear-gradient(180deg,#ff5577,#e0234a);color:#fff}
 .muteBtn{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;z-index:60;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid var(--line);font-size:18px}
 </style>
 </head>
 <body>
 <canvas id="bgfx"></canvas>
 <button class="muteBtn" id="bMute">🔊</button>
+<button class="quitBtn" id="bQuit" aria-label="Salir de la partida">✕</button>
+<div id="qDlg"><div class="qBox"><div class="qIc">🚪</div><div class="qT">¿Seguro que quieres salir de la partida?</div><p id="qSub">Perderás tus puntos y tus fotos de esta partida.</p>
+  <div class="qBtns"><button class="btn alt" id="qNo">NO, ME QUEDO</button><button class="btn" id="qYes">SÍ, SALIR</button></div></div></div>
 
 <!-- PORTADA -->
 <div class="scr on" id="scrHome"><div class="wrap">
@@ -380,7 +396,7 @@ input{font-family:inherit}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.2';
+const VERSION = '2026-11-09.3';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -903,7 +919,7 @@ function poll(){
     busy = false;
     if (!ME) return;
     if (r.ok) onState(r.st);
-    else if (/no existe/i.test(r.error || '')){ toast('La partida ha terminado', 'info'); salir(true); return; }
+    else if (/no existe|inactividad/i.test(r.error || '')){ toast(/inactividad/i.test(r.error) ? '⏰ La partida se cerró por llevar 15 minutos sin uso' : 'La partida ha terminado', 'info', 5000); salir(true); return; }
     const f = ST && ST.fase;
     const fast = f === 'lobby' || f === 'voto' || f === 'resultado' || f === 'final' || (f === 'captura' && now() > ST.tEnd - 500);
     pollT = setTimeout(poll, fast ? 1100 : 2500);
@@ -938,10 +954,16 @@ async function unir(code){
   try{ history.replaceState(null, '', location.pathname); }catch(e){}
   SFX.go(); onState(r.st); poll();
 }
+// botón ✕ de salir: visible siempre que estés dentro de una partida
+function paintQuit(){ document.body.classList.toggle('inGame', !!ME && !!ST); }
+$('bQuit').onclick = () => { SFX.click(); $('qSub').textContent = ST && ST.fase !== 'lobby' && ST.fase !== 'final' ? 'Perderás tus puntos y tus fotos de esta partida.' : 'Saldrás de la sala ' + (ST ? ST.code : '') + '.'; $('qDlg').classList.add('on'); };
+$('qNo').onclick = () => { SFX.click(); $('qDlg').classList.remove('on'); };
+$('qDlg').onclick = e => { if (e.target.id === 'qDlg') $('qDlg').classList.remove('on'); };
+$('qYes').onclick = () => { SFX.click(); $('qDlg').classList.remove('on'); salir(); };
 function salir(silent){
   if (ME && !silent) api('acc', { code: ME.code, tok: ME.tok, a: 'salir' });
   ME = null; ST = null; LS.set('me', null); clearTimeout(pollT); stopCapture(); musicStop();
-  lastScreen = ''; show('scrHome');
+  lastScreen = ''; show('scrHome'); $('qDlg').classList.remove('on'); paintQuit();
 }
 
 /* =========================================================
@@ -954,7 +976,7 @@ const R_of = n => ST && ST.R[n - 1] ? { seed: ST.R[n - 1].seed, esc: ST.R[n - 1]
 const pjOf = st => PERSONAJES.find(p => p.id === (st.cfg && st.cfg.pj)) || PERSONAJES[0];
 const player = id => ST.jug.find(j => j.id === Number(id)) || { n: '¿?', c: '#888' };
 function onState(st){
-  const prev = ST; ST = st;
+  const prev = ST; ST = st; paintQuit();
   PJ = pjOf(st);
   if (st.fase === 'lobby') screenLobby();
   else if (st.fase === 'captura') screenCapture(prev);

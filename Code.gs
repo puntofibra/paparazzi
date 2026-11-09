@@ -11,6 +11,7 @@ const T_ELEGIR = 12000;     // margen para elegir y enviar la foto
 const T_SLOT = 7000;        // tiempo por foto en la pasarela de votos
 // los resultados ya no tienen contador: se sigue cuando todos pulsan CONTINUAR (o el anfitrión fuerza)
 const T_OFF = 25000;        // sin noticias en 25 s = desconectado
+const T_INACT = 15 * 60000; // sala o partida sin uso 15 min = se cierra sola
 
 function doPost(e) {
   let d = {};
@@ -41,8 +42,16 @@ function conLock_(fn) {
 
 /* ---------- utilidades ---------- */
 const limpiaNombre_ = n => String(n || '').replace(/[<>"'`]/g, '').replace(/\s+/g, ' ').trim().slice(0, 14);
-function get_(code) { const s = CacheService.getScriptCache().get('sala_' + String(code || '').toUpperCase()); return s ? JSON.parse(s) : null; }
-function put_(st) { st.v = (st.v || 0) + 1; CacheService.getScriptCache().put('sala_' + st.code, JSON.stringify(st), 21600); }
+function get_(code) {
+  const k = 'sala_' + String(code || '').toUpperCase(), c = CacheService.getScriptCache(), s = c.get(k);
+  if (!s) return null;
+  const st = JSON.parse(s);
+  // sin ninguna acción en 15 min (nadie juega, vota ni toca nada) → la sala se cierra
+  if (Date.now() - (st.uso || st.creada || 0) > T_INACT) { c.remove(k); return null; }
+  return st;
+}
+// la caché también caduca sola a los 15 min si nadie la abre
+function put_(st) { st.v = (st.v || 0) + 1; CacheService.getScriptCache().put('sala_' + st.code, JSON.stringify(st), 900); }
 function yo_(st, tok) { return st.jug.find(j => j.t && j.t === String(tok || '')) || null; }
 function nuevoCodigo_() {
   const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -68,7 +77,7 @@ function crear_(d) {
   const n = limpiaNombre_(d.n) || 'Fotógrafo';
   const code = nuevoCodigo_(), tok = Utilities.getUuid();
   const st = {
-    code, v: 0, fase: 'lobby', host: 1, sig: 2,
+    code, v: 0, uso: Date.now(), fase: 'lobby', host: 1, sig: 2,
     jug: [{ id: 1, n, c: COLORES[0], t: tok, on: Date.now(), pts: 0 }],
     cfg: { rondas: 5, dur: 15, pj: 'jorge' }, nof: {}, ronda: 0, R: [], esc: [], fotos: {}, votos: {}, hist: [], creada: Date.now()
   };
@@ -91,6 +100,7 @@ function unir_(d) {
     me = { id: st.sig++, n, c, t: Utilities.getUuid(), on: now, pts: 0 };
     st.jug.push(me);
   } else me.on = now;
+  st.uso = now;
   if (!st.jug.some(j => j.id === st.host && now - (j.on || 0) < T_OFF)) st.host = me.id;
   avanzar_(st, now);
   put_(st);
@@ -98,9 +108,11 @@ function unir_(d) {
 }
 function ver_(d) {
   let st = get_(d.code);
-  if (!st) return { ok: false, error: 'La partida ya no existe' };
+  if (!st) return { ok: false, error: 'La partida ya no existe (se cierra sola tras 15 min de inactividad)' };
   const now = Date.now();
   const me = yo_(st, d.tok);
+  // durante la ronda de fotos o la votación la partida está en uso aunque no se pulse nada
+  if (st.fase === 'captura' || st.fase === 'voto') st.uso = Math.max(st.uso || 0, now - 1);
   // marcar presencia cada ~8 s y avanzar fases por tiempo (con candado solo cuando hace falta)
   const necesita = (me && now - (me.on || 0) > 8000) || debeAvanzar_(st, now) || (!st.jug.some(j => j.id === st.host && now - (j.on || 0) < T_OFF));
   if (necesita) {
@@ -223,6 +235,7 @@ function acc_(d) {
   if (!me) return { ok: false, error: 'No estás en esta partida' };
   const now = Date.now(); me.on = now;
   const a = d.a;
+  st.uso = now;
   if (a === 'cfg' && me.id === st.host && st.fase === 'lobby') {
     const r = parseInt(d.rondas, 10), du = parseInt(d.dur, 10);
     if ([3, 5, 7, 10].indexOf(r) >= 0) st.cfg.rondas = r;
