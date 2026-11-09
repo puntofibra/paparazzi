@@ -464,7 +464,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-10.2';
+const VERSION = '2026-11-10.3';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -1756,7 +1756,7 @@ $('shutter').addEventListener('pointerdown', e => { e.preventDefault(); shoot();
 const CAM0 = () => ({ ax: WW / 2, ay: 520, zm: 1.3, pf: .2, pe: 0, mx: 0, my: 0 });
 let CAM = CAM0(), pfTarget = .2, lastS = null, capOn = false;
 const CAMV = { px: 0, py: 0, vx: 0, vy: 0, t: 0 };
-function camReset(){ CAM = CAM0(); pfTarget = .2; CAMV.t = 0; CAMV.vx = CAMV.vy = 0; paintExpo(); paintMini(); }
+function camReset(){ CAM = CAM0(); pfTarget = .2; lastS = null; CAMV.t = 0; CAMV.vx = CAMV.vy = 0; paintExpo(); paintMini(); }
 const camCopy = () => ({ ax: Math.round(CAM.ax), ay: Math.round(CAM.ay), zm: Math.round(CAM.zm * 100) / 100, pf: Math.round(CAM.pf * 1000) / 1000, pe: Math.round(CAM.pe * 100) / 100, mx: Math.round(CAM.mx), my: Math.round(CAM.my) });
 function camClamp(){ const vh = WH / CAM.zm, vw = vh * .75; CAM.ax = clamp(CAM.ax, vw / 2, WW - vw / 2); CAM.ay = clamp(CAM.ay, vh / 2, WH - vh / 2); }
 function camStep(){
@@ -1768,7 +1768,26 @@ function camStep(){
   CAMV.px = CAM.ax; CAMV.py = CAM.ay; CAMV.t = tn;
   CAM.mx = clamp(CAMV.vx * .055, -150, 150); CAM.my = clamp(CAMV.vy * .055, -150, 150);
   if (Math.abs(CAM.mx) < 1.5) CAM.mx = 0; if (Math.abs(CAM.my) < 1.5) CAM.my = 0;
+  camAyuda();
   paintMini();
+}
+// ayuda de cámara: el personaje puede salirse como mucho medio cuerpo del visor; si se escapa más,
+// la cámara lo va siguiendo suave (sin contar como foto movida). Aún hay que encuadrarlo bien para la foto buena.
+function camAyuda(){
+  if (!lastS || !lastS.J) return;
+  const J = lastS.J, vh = WH / CAM.zm, vw = vh * .75, jcx = J.x + J.w / 2, jcy = J.y + J.h / 2;
+  const fuera = (a, c, half) => a < c - half ? (c - half) - a : (a > c + half ? (c + half) - a : 0);
+  const dx = fuera(CAM.ax, jcx, vw / 2), dy = fuera(CAM.ay, jcy, vh / 2);
+  if (!dx && !dy) return;
+  let mx = dx * .3, my = dy * .3;
+  const hx = Math.abs(dx) - J.w * .08, hy = Math.abs(dy) - J.h * .08;   // nunca más de un poquito pasado de medio cuerpo
+  if (hx > 0) mx = Math.sign(dx) * Math.max(Math.abs(mx), hx);
+  if (hy > 0) my = Math.sign(dy) * Math.max(Math.abs(my), hy);
+  const ax0 = CAM.ax, ay0 = CAM.ay;
+  CAM.ax += mx; CAM.ay += my; camClamp();
+  const rx = CAM.ax - ax0, ry = CAM.ay - ay0;
+  CAMV.px += rx; CAMV.py += ry;                         // el movimiento de la ayuda no cuenta como foto movida
+  if (gest && gest.moved && !gest.pinch){ gest.ax += rx; gest.ay += ry; }   // con el dedo, que no pelee con la ayuda
 }
 function paintMini(){
   const f = $('miniFr'); if (!f) return;
