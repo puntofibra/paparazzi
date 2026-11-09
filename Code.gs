@@ -28,6 +28,14 @@ function rutear_(d) {
       case 'unir': return conLock_(() => unir_(d));
       case 'ver': return ver_(d);
       case 'acc': return conLock_(() => acc_(d));
+      // personajes con código
+      case 'pjCodigo': return pjCodigo_(d);
+      case 'pjVarios': return pjVarios_(d);
+      // panel admin (llave NFC)
+      case 'admLlave': return admLlave_(d);
+      case 'admLista': return admLista_(d);
+      case 'admGuardar': return conLock_(() => admGuardar_(d));
+      case 'admBorrar': return conLock_(() => admBorrar_(d));
       default: return { ok: true, juego: 'PAPARAZZI' };
     }
   } catch (err) {
@@ -240,7 +248,9 @@ function acc_(d) {
     const r = parseInt(d.rondas, 10), du = parseInt(d.dur, 10);
     if ([3, 5, 7, 10].indexOf(r) >= 0) st.cfg.rondas = r;
     if ([10, 15, 20].indexOf(du) >= 0) st.cfg.dur = du;
-    if (d.pj) st.cfg.pj = String(d.pj).replace(/[^\w]/g, '').slice(0, 20);
+    // Jorge siempre; otro personaje solo si el anfitrión tiene su código
+    if (d.pj === 'jorge') { st.cfg.pj = 'jorge'; delete st.pjDef; }
+    else if (d.pj && d.pjCode) { const P = pjPorCodigo_(d.pjCode); if (P && P.id === String(d.pj)) { st.cfg.pj = P.id; st.pjDef = pjPub_(P); } }
   } else if (a === 'empezar' && me.id === st.host && (st.fase === 'lobby' || st.fase === 'final')) {
     if (st.fase === 'final') st.jug = activos_(st, now);
     st.jug.forEach(j => j.pts = 0);
@@ -276,3 +286,114 @@ function acc_(d) {
 }
 
 function autorizar() { SpreadsheetApp.getActiveSpreadsheet(); }
+
+
+/* =========================================================
+   PERSONAJES CON CÓDIGO (hoja "Personajes")
+   id | nombre | codigo | icono | poses (JSON) | activo | creado
+   Las imágenes van en el repo: personajes/<id>/<archivo>.png
+   ========================================================= */
+const PJ_COLS = ['id', 'nombre', 'codigo', 'icono', 'poses', 'activo', 'creado'];
+function hojaPj_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName('Personajes');
+  if (!sh) { sh = ss.insertSheet('Personajes'); sh.appendRow(PJ_COLS); sh.setFrozenRows(1); }
+  return sh;
+}
+function pjTodos_() {
+  const c = CacheService.getScriptCache(), k = 'pj_todos', s = c.get(k);
+  if (s) return JSON.parse(s);
+  const v = hojaPj_().getDataRange().getValues(), out = [];
+  for (let i = 1; i < v.length; i++) {
+    if (!v[i][0]) continue;
+    let poses = []; try { poses = JSON.parse(v[i][4] || '[]'); } catch (e) {}
+    out.push({ fila: i + 1, id: String(v[i][0]), n: String(v[i][1]), code: String(v[i][2]).toUpperCase(), icon: String(v[i][3] || ''), poses, activo: v[i][5] !== false && String(v[i][5]).toUpperCase() !== 'NO' && String(v[i][5]).toUpperCase() !== 'FALSE' });
+  }
+  c.put(k, JSON.stringify(out), 300);
+  return out;
+}
+function pjLimpiaCache_() { CacheService.getScriptCache().remove('pj_todos'); }
+const limpiaCod_ = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+function pjPorCodigo_(code) {
+  code = limpiaCod_(code); if (code.length !== 4) return null;
+  return pjTodos_().find(p => p.code === code && p.activo && p.poses.length) || null;
+}
+function pjPub_(P) {
+  const base = 'personajes/' + P.id + '/';
+  const fx = f => /^https?:|\//.test(f) ? f : base + f;
+  return { id: P.id, n: P.n, icon: fx(P.icon || (P.poses[0] && P.poses[0].f) || ''), poses: P.poses.map(x => Object.assign({}, x, { f: fx(x.f) })) };
+}
+function freno_(clave, max, seg) {
+  const c = CacheService.getScriptCache(), k = 'fr_' + clave, n = Number(c.get(k) || 0);
+  if (n >= max) throw new Error('Demasiados intentos. Espera unos minutos.');
+  c.put(k, String(n + 1), seg);
+}
+function pjCodigo_(d) {
+  freno_('pjcod', 120, 600);
+  const P = pjPorCodigo_(d.code);
+  if (!P) return { ok: false, error: 'Ese código no existe' };
+  return { ok: true, code: P.code, pj: pjPub_(P) };
+}
+function pjVarios_(d) {
+  const codes = (Array.isArray(d.codes) ? d.codes : []).slice(0, 30).map(limpiaCod_);
+  const res = [];
+  codes.forEach(c => { const P = pjPorCodigo_(c); if (P) res.push({ code: P.code, pj: pjPub_(P) }); });
+  return { ok: true, pjs: res };
+}
+
+/* ---------- admin con llave NFC ---------- */
+function sha_(s) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s, Utilities.Charset.UTF_8).map(b => ('0' + (b & 255).toString(16)).slice(-2)).join(''); }
+function llaves_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('llaves') || '[]'); } catch (e) { return []; } }
+function admLlave_(d) {
+  freno_('admllave', 10, 600);
+  const llave = String(d.llave || '').toLowerCase().replace(/[^0-9a-f]/g, '');
+  if (llave.length < 6) return { ok: false, error: 'Llave no válida' };
+  const list = llaves_(), h = sha_('paparazzi|' + llave);
+  let nueva = false;
+  if (list.indexOf(h) < 0) {
+    // la primera llave que se pasa queda registrada como la del admin; después solo valen las registradas
+    if (list.length) return { ok: false, error: 'Esta llave no está autorizada' };
+    list.push(h); PropertiesService.getScriptProperties().setProperty('llaves', JSON.stringify(list)); nueva = true;
+  }
+  const t = Utilities.getUuid().replace(/-/g, '');
+  CacheService.getScriptCache().put('adm_' + t, '1', 14400);
+  return { ok: true, adm: t, nueva };
+}
+function esAdm_(d) { if (!d.adm || CacheService.getScriptCache().get('adm_' + d.adm) !== '1') throw new Error('Sesión de admin caducada: vuelve a pasar la llave'); }
+function admLista_(d) {
+  esAdm_(d); pjLimpiaCache_();
+  return { ok: true, pjs: pjTodos_().map(P => ({ id: P.id, n: P.n, code: P.code, activo: P.activo, nPoses: P.poses.length, icon: pjPub_(P).icon })) };
+}
+function codigoNuevo_() {
+  const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', usados = pjTodos_().map(p => p.code);
+  for (let k = 0; k < 200; k++) { let c = ''; for (let i = 0; i < 4; i++) c += L[Math.floor(Math.random() * L.length)]; if (usados.indexOf(c) < 0) return c; }
+  throw new Error('No hay códigos libres');
+}
+function admGuardar_(d) {
+  esAdm_(d); pjLimpiaCache_();
+  const sh = hojaPj_(), todos = pjTodos_();
+  const n = String(d.n || '').replace(/[<>"'`]/g, '').trim().slice(0, 20);
+  let code = d.code === 'NUEVO' ? codigoNuevo_() : limpiaCod_(d.code);
+  if (d.code && d.code !== 'NUEVO' && code.length !== 4) return { ok: false, error: 'El código debe tener 4 letras o números' };
+  const P = d.id ? todos.find(x => x.id === String(d.id)) : null;
+  if (code && todos.some(x => x.code === code && (!P || x.id !== P.id))) return { ok: false, error: 'Ese código ya lo tiene otro personaje' };
+  if (P) {
+    if (n) sh.getRange(P.fila, 2).setValue(n);
+    if (code) sh.getRange(P.fila, 3).setValue(code);
+    if (d.activo != null) sh.getRange(P.fila, 6).setValue(d.activo ? 'SI' : 'NO');
+  } else {
+    if (!n) return { ok: false, error: 'Ponle un nombre' };
+    const id = n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '') || ('pj' + Date.now());
+    if (id === 'jorge' || todos.some(x => x.id === id)) return { ok: false, error: 'Ya hay un personaje con ese nombre' };
+    sh.appendRow([id, n, code || codigoNuevo_(), '', '[]', 'SI', new Date()]);
+  }
+  pjLimpiaCache_();
+  return admLista_(d);
+}
+function admBorrar_(d) {
+  esAdm_(d); pjLimpiaCache_();
+  const P = pjTodos_().find(x => x.id === String(d.id));
+  if (P) hojaPj_().deleteRow(P.fila);
+  pjLimpiaCache_();
+  return admLista_(d);
+}

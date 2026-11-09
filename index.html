@@ -235,6 +235,31 @@ body.inGame .muteBtn{right:58px}
 body.inGame .pTop{padding-right:62px}
 #qDlg{position:fixed;inset:0;z-index:95;background:rgba(5,2,10,.8);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
 #qDlg.on{display:flex}
+#mDlg{position:fixed;inset:0;z-index:94;background:rgba(5,2,10,.85);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:16px}
+#mDlg.on{display:flex}
+.mBox{max-height:88vh;overflow:auto;max-width:440px;text-align:left}
+.mBox h3{margin:0 0 6px;font-weight:900;font-size:20px;text-align:center}
+.mBox .mSub{color:var(--mute);font-size:14px;text-align:center;margin:0 0 14px}
+.mBox .btn{margin:8px 0 0}
+.mIn{width:100%;box-sizing:border-box;padding:14px;border-radius:14px;border:2px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:900 28px Rubik;letter-spacing:10px;text-align:center;text-transform:uppercase}
+.mIn.txt{font-size:18px;letter-spacing:0;text-transform:none}
+.mErr{color:#ff6b8a;font-weight:800;font-size:14px;text-align:center;min-height:18px;margin-top:8px}
+.aRow{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:rgba(0,0,0,.3);border:1px solid var(--line);margin-bottom:8px}
+.aRow img,.aRow .ph{width:44px;height:56px;object-fit:contain;flex:none;font-size:30px;display:flex;align-items:center;justify-content:center}
+.aRow .nm{flex:1;min-width:0}
+.aRow .nm b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aRow .nm small{color:var(--mute);font-size:11px;font-weight:700}
+.aRow .cd{font:400 20px Bungee;color:var(--yellow);letter-spacing:2px}
+.aRow.off{opacity:.5}
+.aBtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.aBtns button{font-size:12px;font-weight:800;padding:6px 9px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
+.aBtns button.red{border-color:#ff5577;color:#ff8aa0}
+.mPrompt{width:100%;box-sizing:border-box;height:46vh;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:#e6d6ff;font:500 12px/1.45 ui-monospace,monospace;padding:10px;resize:none}
+.nfcRing{width:90px;height:90px;margin:4px auto 10px;border-radius:50%;border:3px solid var(--cyan,#00e5ff);display:flex;align-items:center;justify-content:center;font-size:40px;animation:nfcP 1.4s ease-in-out infinite}
+@keyframes nfcP{50%{box-shadow:0 0 0 14px rgba(0,229,255,.15);transform:scale(1.05)}}
+.pjc{position:relative}
+.pjc .ed{position:absolute;top:-6px;right:-6px;width:28px;height:28px;border-radius:50%;background:#2a0f45;border:2px solid var(--yellow);font-size:13px;display:flex;align-items:center;justify-content:center}
+.pjc.add{border-style:dashed;color:var(--yellow)}.pjc.add b{height:74px;display:flex;align-items:center;font-size:50px;font-weight:900}
 .qBox{width:100%;max-width:360px;background:#1f0b33;border:2px solid var(--pink);border-radius:24px;padding:24px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 30px rgba(255,45,149,.3);animation:tIn .35s cubic-bezier(.2,1.5,.4,1) both}
 .qIc{font-size:46px}
 .qT{font-weight:900;font-size:21px;margin:8px 0 6px}
@@ -249,6 +274,7 @@ body.inGame .pTop{padding-right:62px}
 <canvas id="bgfx"></canvas>
 <button class="muteBtn" id="bMute">🔊</button>
 <button class="quitBtn" id="bQuit" aria-label="Salir de la partida">✕</button>
+<div id="mDlg"><div class="qBox mBox" id="mBox"></div></div>
 <div id="qDlg"><div class="qBox"><div class="qIc">🚪</div><div class="qT">¿Seguro que quieres salir de la partida?</div><p id="qSub">Perderás tus puntos y tus fotos de esta partida.</p>
   <div class="qBtns"><button class="btn alt" id="qNo">NO, ME QUEDO</button><button class="btn" id="qYes">SÍ, SALIR</button></div></div></div>
 
@@ -396,7 +422,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.3';
+const VERSION = '2026-11-09.4';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -429,6 +455,32 @@ const PERSONAJES = [
   ] }
 ];
 let PJ = PERSONAJES[0];
+// personajes extra desbloqueados con código (se guardan en este móvil)
+const misPj = () => (LS.get('pjs', []) || []).filter(x => x && x.code && x.id);
+function addPj(def, code){
+  let p = PERSONAJES.find(x => x.id === def.id);
+  if (!p){
+    p = { id: def.id, n: def.n, icon: def.icon, extra: 1, poses: (def.poses || []).map(o => Object.assign({ g: .85, tag: [] }, o, { tag: o.tag || [] })) };
+    if (!p.poses.length) return null;
+    PERSONAJES.push(p); p.poses.forEach(ps => loadImg(ps.f));
+  }
+  if (code) p.code = code;
+  return p;
+}
+function quitarPj(id){
+  LS.set('pjs', misPj().filter(x => x.id !== id));
+  const p = PERSONAJES.find(x => x.id === id); if (p) delete p.code;
+}
+async function cargarMisPj(){
+  const mis = misPj(); if (!mis.length) return;
+  const r = await api('pjVarios', { codes: mis.map(x => x.code) }, 15000);
+  if (!r || !r.ok) return;
+  const vale = r.pjs.map(x => x.code);
+  LS.set('pjs', mis.filter(x => vale.indexOf(x.code) >= 0));   // los borrados por el admin desaparecen
+  r.pjs.forEach(x => addPj(x.pj, x.code));
+  if (ST && ST.fase === 'lobby') screenLobby();
+}
+const pjArgs = id => { const p = PERSONAJES.find(x => x.id === id); return { pj: id, pjCode: p && p.code || '' }; };
 
 /* ---------- escenarios (las imágenes llegarán en fondos/NN.jpg) ---------- */
 const ESCENAS = [
@@ -954,6 +1006,149 @@ async function unir(code){
   try{ history.replaceState(null, '', location.pathname); }catch(e){}
   SFX.go(); onState(r.st); poll();
 }
+/* ---------- ventana genérica ---------- */
+function modal(html){ $('mBox').innerHTML = html; $('mDlg').classList.add('on'); return $('mBox'); }
+function cerrarModal(){ $('mDlg').classList.remove('on'); pararNfc(); }
+$('mDlg').addEventListener('click', e => { if (e.target.id === 'mDlg') cerrarModal(); });
+function confirmar(tit, sub, ok){
+  return new Promise(res => {
+    const m = modal(`<div style="text-align:center"><div class="qIc">⚠️</div><h3>${esc(tit)}</h3><p class="mSub">${esc(sub || '')}</p></div><div class="qBtns"><button class="btn alt" id="cNo">CANCELAR</button><button class="btn" id="cSi" style="background:linear-gradient(180deg,#ff5577,#e0234a);color:#fff">${esc(ok || 'SÍ')}</button></div>`);
+    m.querySelector('#cNo').onclick = () => { cerrarModal(); res(false); };
+    m.querySelector('#cSi').onclick = () => { cerrarModal(); res(true); };
+  });
+}
+/* ---------- añadir / editar personaje con código ---------- */
+function anadirPj(){
+  const m = modal(`<h3>➕ AÑADIR PERSONAJE</h3><p class="mSub">Escribe el código de 4 caracteres que te han dado para desbloquear tu personaje personalizado</p>
+    <input class="mIn" id="pcIn" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="····"><div class="mErr" id="pcErr"></div>
+    <button class="btn y" id="pcOk">🔓 DESBLOQUEAR</button><button class="btn alt" id="pcNo">CANCELAR</button>`);
+  const inp = m.querySelector('#pcIn'); setTimeout(() => inp.focus(), 100);
+  inp.oninput = () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); m.querySelector('#pcErr').textContent = ''; };
+  m.querySelector('#pcNo').onclick = cerrarModal;
+  const go = async () => {
+    const c = inp.value; if (c.length !== 4){ m.querySelector('#pcErr').textContent = 'El código tiene 4 letras o números'; return; }
+    m.querySelector('#pcOk').disabled = true;
+    const r = await api('pjCodigo', { code: c });
+    m.querySelector('#pcOk').disabled = false;
+    if (!r.ok){ m.querySelector('#pcErr').textContent = r.error || 'Código no válido'; SFX.click(); return; }
+    const p = addPj(r.pj, r.code); if (!p) return;
+    LS.set('pjs', misPj().filter(x => x.id !== p.id).concat([{ code: r.code, id: p.id }]));
+    cerrarModal(); SFX.ding(); confetti(80); toast('🎉 ¡Has desbloqueado a ' + p.n + '!', 'ok');
+    if (ST && ST.fase === 'lobby'){ screenLobby(); if (isHost()) accion('cfg', Object.assign({ rondas: ST.cfg.rondas, dur: ST.cfg.dur }, pjArgs(p.id))); }
+  };
+  m.querySelector('#pcOk').onclick = go; inp.onkeydown = e => { if (e.key === 'Enter') go(); };
+}
+function editarPj(id){
+  const p = PERSONAJES.find(x => x.id === id); if (!p) return;
+  SFX.click();
+  const m = modal(`<div style="text-align:center"><img src="${p.icon}" style="height:110px;object-fit:contain" alt=""><h3>${esc(p.n)}</h3><p class="mSub">Código: <b style="color:var(--yellow);letter-spacing:3px">${esc(p.code || '')}</b></p></div>
+    <button class="btn" id="peDel" style="background:linear-gradient(180deg,#ff5577,#e0234a);color:#fff">🗑️ ELIMINAR PERSONAJE</button><button class="btn alt" id="peNo">CERRAR</button>`);
+  m.querySelector('#peNo').onclick = cerrarModal;
+  m.querySelector('#peDel').onclick = async () => {
+    if (!await confirmar('¿Eliminar a ' + p.n + '?', 'Desaparecerá de este móvil. Para recuperarlo tendrás que volver a meter su código.', 'SÍ, ELIMINAR')) return;
+    quitarPj(id); toast('🗑️ ' + p.n + ' eliminado', 'info');
+    if (ST && ST.fase === 'lobby'){ if (isHost() && PJ.id === id) accion('cfg', { rondas: ST.cfg.rondas, dur: ST.cfg.dur, pj: 'jorge' }); screenLobby(); }
+  };
+}
+/* ---------- panel admin: 5 toques rápidos en Jorge + llave NFC ---------- */
+const PROMPT_POSES = "Usa la foto adjunta como referencia de la persona: misma cara, mismos rasgos, mismo pelo, mismo tono de piel y su ropa o un look parecido. Conviértela en un personaje de caricatura de dibujo animado, con cabeza un poco grande, contorno negro grueso y limpio, colores planos y vivos con sombreado suave dentro de la figura. Es el mismo estilo cartoon que un sticker de WhatsApp de calidad.\n\nDibuja AL MISMO PERSONAJE en 10 poses diferentes, todas en UNA SOLA IMAGEN horizontal, colocadas en una cuadrícula de 2 filas por 5 columnas.\n\nLas 10 poses, en este orden:\n1. De pie, sonriendo de frente con una mano en la cintura y el móvil en la otra mano\n2. Haciéndose un selfie con el brazo estirado, sonrisa enorme\n3. Bailando, muy contento, con los brazos en alto\n4. Saltando en el aire de alegría, con los pies sin tocar el suelo\n5. Bajándose las gafas de sol con un dedo, con cara de chulo\n6. De perfil, mirando hacia un lado\n7. Corriendo de lado, en plena carrera\n8. Llorando de forma dramática, con la mano en la frente\n9. Aburrido, con los brazos caídos y cara de desgana\n10. De espaldas, mirando hacia atrás por encima del hombro\n\nMUY IMPORTANTE para poder recortarlo:\n- Fondo completamente liso de un solo color: blanco puro (#FFFFFF), sin degradados, sin texturas, sin suelo y sin escenario.\n- Cada pose completa de la cabeza a los pies, sin cortar ninguna parte del cuerpo y sin que se salga del cuadro.\n- Mucho espacio vacío entre una pose y otra: que NINGUNA se toque ni se superponga con otra.\n- Todas las poses al mismo tamaño y a la misma escala, con los pies a la misma altura en cada fila.\n- Nada fuera del contorno del personaje: sin sombras en el suelo, sin brillos, sin destellos, sin líneas de movimiento, sin estrellas, sin lágrimas sueltas volando, sin confeti, sin texto, sin números y sin marcos.\n- Contorno negro cerrado y bien definido alrededor de cada figura.";
+let taps = [];
+function tapAdmin(){ const t = Date.now(); taps = taps.filter(x => t - x < 2500); taps.push(t); if (taps.length >= 5){ taps = []; abrirAdmin(); } }
+$('homeJorge').addEventListener('click', tapAdmin);
+let ADM = (() => { try{ return sessionStorage.getItem('pz_adm') || ''; }catch(e){ return ''; } })();
+let nfcCtrl = null, nfcBusy = false;
+function pararNfc(){ if (nfcCtrl){ try{ nfcCtrl.abort(); }catch(e){} nfcCtrl = null; } nfcBusy = false; }
+async function escucharNfc(onSerial, txt){
+  pararNfc();
+  try{
+    nfcCtrl = new AbortController(); const r = new NDEFReader();
+    await r.scan({ signal: nfcCtrl.signal });
+    txt('📡 Acerca tu llave a la parte de atrás del móvil');
+    r.onreadingerror = () => { if (!nfcBusy) txt('No pude leer la llave. Vuelve a acercarla.'); };
+    r.onreading = async ev => {
+      if (nfcBusy) return; nfcBusy = true; try{ navigator.vibrate && navigator.vibrate(80); }catch(e){}
+      const serial = String(ev.serialNumber || '').replace(/:/g, '');
+      try{ await onSerial(serial); }catch(e){ txt('❌ ' + (e.message || e)); nfcBusy = false; }
+    };
+    return true;
+  }catch(e){ pararNfc(); txt('Toca el botón para activar el lector NFC'); return false; }
+}
+function abrirAdmin(){
+  SFX.click();
+  if (ADM) return panelAdmin();
+  const hay = 'NDEFReader' in window;
+  const m = modal(`<div style="text-align:center"><div class="nfcRing">🔑</div><h3>ACCESO ADMIN</h3><p class="mSub" id="nfTxt">${hay ? 'Activando lector…' : 'Abre PAPARAZZI en tu móvil Android con Chrome para entrar con la llave NFC.'}</p></div>
+    ${hay ? '<button class="btn c" id="nfBtn" style="display:none">🔑 ACTIVAR LECTOR NFC</button>' : ''}<button class="btn alt" id="nfNo">CERRAR</button>`);
+  m.querySelector('#nfNo').onclick = cerrarModal;
+  if (!hay) return;
+  const txt = t => { const e = $('nfTxt'); if (e) e.textContent = t; const b = $('nfBtn'); if (b) b.style.display = /Toca el botón/.test(t) ? '' : 'none'; };
+  const ok = async serial => {
+    const r = await api('admLlave', { llave: serial });
+    if (!r.ok) throw new Error(r.error || 'Llave no autorizada');
+    ADM = r.adm; try{ sessionStorage.setItem('pz_adm', ADM); }catch(e){}
+    pararNfc(); SFX.ding(); if (r.nueva) toast('🔑 Llave registrada como llave de admin', 'ok', 4000);
+    panelAdmin();
+  };
+  escucharNfc(ok, txt);
+  const b = m.querySelector('#nfBtn'); if (b) b.onclick = () => escucharNfc(ok, txt);
+}
+async function adm(accion, d){
+  const r = await api(accion, Object.assign({ adm: ADM }, d || {}), 20000);
+  if (!r.ok){ if (/caducada/.test(r.error || '')){ ADM = ''; try{ sessionStorage.removeItem('pz_adm'); }catch(e){} cerrarModal(); toast(r.error, 'err'); abrirAdmin(); } else toast(r.error || 'Error', 'err'); throw new Error(r.error); }
+  return r;
+}
+let ADMPJ = [];
+async function panelAdmin(){
+  modal('<h3>🔑 PANEL ADMIN</h3><p class="mSub">Cargando personajes…</p>');
+  try{ ADMPJ = (await adm('admLista')).pjs; }catch(e){ return; }
+  pintaAdmin();
+}
+function pintaAdmin(){
+  const rows = ADMPJ.map(p => `<div class="aRow ${p.activo ? '' : 'off'}">${p.icon ? `<img src="${p.icon}" alt="">` : '<div class="ph">👤</div>'}
+    <div class="nm"><b>${esc(p.n)}</b><small>${p.nPoses ? p.nPoses + ' poses' : '⚠️ sin imágenes todavía'}${p.activo ? '' : ' · DESACTIVADO'}</small>
+      <div class="aBtns"><button data-a="ren" data-id="${p.id}">✏️ Nombre</button><button data-a="cod" data-id="${p.id}">🔄 Código</button><button data-a="act" data-id="${p.id}">${p.activo ? '🚫 Desactivar' : '✅ Activar'}</button><button class="red" data-a="del" data-id="${p.id}">🗑️</button></div></div>
+    <div class="cd" data-a="copy" data-c="${p.code}">${p.code}</div></div>`).join('');
+  const m = modal(`<h3>🔑 PANEL ADMIN</h3><p class="mSub">Personajes con código · Jorge es fijo y lo tiene todo el mundo. Toca un código para copiarlo.</p>
+    <button class="btn y" id="apPrompt">📝 PROMPT</button>
+    <div style="margin-top:14px">${rows || '<p class="mSub">Todavía no hay personajes extra</p>'}</div>
+    <button class="btn c" id="apNew">＋ NUEVO PERSONAJE</button><button class="btn alt" id="apOut">🚪 CERRAR SESIÓN ADMIN</button><button class="btn alt" id="apNo">CERRAR</button>`);
+  m.querySelector('#apNo').onclick = cerrarModal;
+  m.querySelector('#apOut').onclick = () => { ADM = ''; try{ sessionStorage.removeItem('pz_adm'); }catch(e){} cerrarModal(); toast('Sesión de admin cerrada', 'info'); };
+  m.querySelector('#apPrompt').onclick = verPrompt;
+  m.querySelector('#apNew').onclick = async () => { const n = await pedirTexto('➕ NUEVO PERSONAJE', 'Nombre del personaje (solo lo ves tú). Luego pásame sus imágenes por el chat.', ''); if (!n) return pintaAdmin(); try{ ADMPJ = (await adm('admGuardar', { n, code: 'NUEVO' })).pjs; toast('✅ Personaje creado', 'ok'); }catch(e){} pintaAdmin(); };
+  m.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+    const p = ADMPJ.find(x => x.id === b.dataset.id), a = b.dataset.a;
+    if (a === 'copy'){ copiar(b.dataset.c); return; }
+    try{
+      if (a === 'ren'){ const n = await pedirTexto('✏️ CAMBIAR NOMBRE', '', p.n); if (n) ADMPJ = (await adm('admGuardar', { id: p.id, n })).pjs; }
+      else if (a === 'cod'){ if (await confirmar('¿Código nuevo para ' + p.n + '?', 'El código ' + p.code + ' dejará de valer para quien no lo haya metido aún. Quien ya lo tenga lo perderá.', 'SÍ, CAMBIAR')) ADMPJ = (await adm('admGuardar', { id: p.id, code: 'NUEVO' })).pjs; }
+      else if (a === 'act') ADMPJ = (await adm('admGuardar', { id: p.id, activo: !p.activo })).pjs;
+      else if (a === 'del'){ if (await confirmar('¿Borrar a ' + p.n + '?', 'Desaparecerá para todos los que lo tengan. Las imágenes se quedan en GitHub.', 'SÍ, BORRAR')) ADMPJ = (await adm('admBorrar', { id: p.id })).pjs; }
+    }catch(e){}
+    pintaAdmin();
+  });
+}
+function pedirTexto(tit, sub, val){
+  return new Promise(res => {
+    const m = modal(`<h3>${esc(tit)}</h3>${sub ? `<p class="mSub">${esc(sub)}</p>` : ''}<input class="mIn txt" id="ptIn" maxlength="20" value="${esc(val || '')}"><button class="btn y" id="ptOk">GUARDAR</button><button class="btn alt" id="ptNo">CANCELAR</button>`);
+    const i = m.querySelector('#ptIn'); setTimeout(() => i.focus(), 100);
+    m.querySelector('#ptNo').onclick = () => res('');
+    m.querySelector('#ptOk').onclick = () => res(i.value.trim());
+    i.onkeydown = e => { if (e.key === 'Enter') res(i.value.trim()); };
+  });
+}
+async function copiar(t){
+  try{ await navigator.clipboard.writeText(t); }catch(e){ const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); try{ document.execCommand('copy'); }catch(er){} a.remove(); }
+  SFX.ding(); toast('📋 Copiado', 'ok', 1500);
+}
+function verPrompt(){
+  const m = modal(`<h3>📝 PROMPT PARA GEMINI</h3><p class="mSub">Sube a Gemini la foto de la persona y pega este texto. Saca las 10 poses en una imagen; recorta el fondo y pásamela por el chat.</p>
+    <textarea class="mPrompt" readonly id="prTx"></textarea><button class="btn y" id="prCp">📋 COPIAR PROMPT</button><button class="btn alt" id="prBk">⬅️ VOLVER</button>`);
+  m.querySelector('#prTx').value = PROMPT_POSES;
+  m.querySelector('#prCp').onclick = () => copiar(PROMPT_POSES);
+  m.querySelector('#prBk').onclick = pintaAdmin;
+}
+
 // botón ✕ de salir: visible siempre que estés dentro de una partida
 function paintQuit(){ document.body.classList.toggle('inGame', !!ME && !!ST); }
 $('bQuit').onclick = () => { SFX.click(); $('qSub').textContent = ST && ST.fase !== 'lobby' && ST.fase !== 'final' ? 'Perderás tus puntos y tus fotos de esta partida.' : 'Saldrás de la sala ' + (ST ? ST.code : '') + '.'; $('qDlg').classList.add('on'); };
@@ -973,7 +1168,12 @@ let lastScreen = '', curRound = 0, myShots = [], pickedIdx = -1, sentPhoto = 0, 
 const meId = () => ST && ST.yo;
 const isHost = () => ST && ST.host === ST.yo;
 const R_of = n => ST && ST.R[n - 1] ? { seed: ST.R[n - 1].seed, esc: ST.R[n - 1].esc, dur: ST.cfg.dur, n } : null;
-const pjOf = st => PERSONAJES.find(p => p.id === (st.cfg && st.cfg.pj)) || PERSONAJES[0];
+function pjOf(st){
+  const id = st.cfg && st.cfg.pj;
+  let p = PERSONAJES.find(x => x.id === id);
+  if (!p && st.pjDef && st.pjDef.id === id) p = addPj(st.pjDef);   // el personaje del anfitrión llega con la partida
+  return p || PERSONAJES[0];
+}
 const player = id => ST.jug.find(j => j.id === Number(id)) || { n: '¿?', c: '#888' };
 function onState(st){
   const prev = ST; ST = st; paintQuit();
@@ -999,8 +1199,19 @@ function screenLobby(){
     Array.from({ length: Math.max(0, Math.min(2, 8 - ST.jug.length)) }, () => '<div class="pl empty"><i>＋</i><span>Esperando…</span></div>').join('');
   if ($('lbPlayers').dataset.k !== html){ if (prevCount && act.length > prevCount) SFX.ding(); prevCount = act.length; $('lbPlayers').dataset.k = html; $('lbPlayers').innerHTML = html; }
   const h = isHost();
-  const pjHtml = PERSONAJES.map(p => `<button class="pjc ${p.id === PJ.id ? 'on' : ''}" data-p="${p.id}" ${h ? '' : 'disabled'}><img src="${p.icon}?v=${VERSION}" alt=""><span>${esc(p.n)}</span></button>`).join('') + '<div class="pjc lock"><b>🔒</b>PRONTO</div><div class="pjc lock"><b>🔒</b>PRONTO</div>';
-  if ($('cfgP').dataset.k !== pjHtml){ $('cfgP').dataset.k = pjHtml; $('cfgP').innerHTML = pjHtml; $('cfgP').querySelectorAll('[data-p]').forEach(b => b.onclick = () => { SFX.click(); accion('cfg', { rondas: ST.cfg.rondas, dur: ST.cfg.dur, pj: b.dataset.p }); }); }
+  // Jorge siempre + los que tengas desbloqueados con código + el del anfitrión + botón ＋
+  const vis = PERSONAJES.filter(p => !p.extra || p.code || p.id === PJ.id);
+  const pjHtml = vis.map(p => `<button class="pjc ${p.id === PJ.id ? 'on' : ''}" data-p="${p.id}"><img src="${p.icon}?v=${VERSION}" alt=""><span>${esc(p.n)}</span>${p.extra && p.code ? `<i class="ed" data-ed="${p.id}">✏️</i>` : ''}</button>`).join('') + '<button class="pjc add" id="pjAdd"><b>＋</b>AÑADIR</button>';
+  if ($('cfgP').dataset.k !== pjHtml){
+    $('cfgP').dataset.k = pjHtml; $('cfgP').innerHTML = pjHtml;
+    $('cfgP').querySelectorAll('[data-p]').forEach(b => b.onclick = e => {
+      const ed = e.target.closest('[data-ed]'); if (ed){ e.stopPropagation(); editarPj(ed.dataset.ed); return; }
+      if (b.dataset.p === 'jorge') tapAdmin();
+      if (!isHost()){ if (b.dataset.p !== 'jorge') toast('Solo el anfitrión elige el personaje de la partida', 'info'); return; }
+      SFX.click(); accion('cfg', Object.assign({ rondas: ST.cfg.rondas, dur: ST.cfg.dur }, pjArgs(b.dataset.p)));
+    });
+    $('pjAdd').onclick = () => { SFX.click(); anadirPj(); };
+  }
   ['cfgR', 'cfgD'].forEach(id => $(id).querySelectorAll('button').forEach(b => { b.classList.toggle('on', +b.dataset.v === (id === 'cfgR' ? ST.cfg.rondas : ST.cfg.dur)); b.disabled = !h; }));
   $('bStart').style.display = h ? '' : 'none';
   $('lbWait').textContent = h ? (act.length < 2 ? 'Puedes empezar solo para practicar, pero es mucho más divertido con amigos 😉' : '') : '⏳ Esperando a que ' + player(ST.host).n + ' empiece la partida…';
@@ -1445,8 +1656,8 @@ $('bExit').onclick = () => { SFX.click(); salir(); };
 $('bAgain').onclick = () => empezar();
 $('bToLobby').onclick = () => { SFX.click(); accion('lobby'); };
 $('bSaveBest').onclick = saveBest;
-$('cfgR').querySelectorAll('button').forEach(b => b.onclick = () => { SFX.click(); accion('cfg', { rondas: +b.dataset.v, dur: ST.cfg.dur, pj: PJ.id }); });
-$('cfgD').querySelectorAll('button').forEach(b => b.onclick = () => { SFX.click(); accion('cfg', { rondas: ST.cfg.rondas, dur: +b.dataset.v, pj: PJ.id }); });
+$('cfgR').querySelectorAll('button').forEach(b => b.onclick = () => { SFX.click(); accion('cfg', Object.assign({ rondas: +b.dataset.v, dur: ST.cfg.dur }, pjArgs(PJ.id))); });
+$('cfgD').querySelectorAll('button').forEach(b => b.onclick = () => { SFX.click(); accion('cfg', Object.assign({ rondas: ST.cfg.rondas, dur: +b.dataset.v }, pjArgs(PJ.id))); });
 $('bShareApp').onclick = async () => { SFX.click(); const txt = '📸 PAPARAZZI: el juego más gracioso para cazar la mejor foto. ¡Juega conmigo!'; if (navigator.share){ try{ await navigator.share({ title: 'PAPARAZZI', text: txt, url: APP_URL }); return; }catch(e){ if (e && e.name === 'AbortError') return; } } window.open('https://wa.me/?text=' + encodeURIComponent(txt + ' ' + APP_URL), '_blank'); };
 let deferredInstall = null;
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; });
@@ -1460,7 +1671,7 @@ $('bInstall').onclick = async () => {
 // Jorge de la portada cambiando de pose con flashes
 let homePose = 0;
 function homeJorge(){
-  const ps = PJ.poses.filter(p => p.g >= .85 && !p.run && !p.air);
+  const ps = PERSONAJES[0].poses.filter(p => p.g >= .85 && !p.run && !p.air);
   const p = ps[homePose++ % ps.length];
   $('homeJorge').src = p.f + '?v=' + VERSION;
   const st = $('homeStage'); if (st.offsetParent){ const f = document.createElement('div'); f.className = 'flashHit'; f.style.left = (20 + Math.random() * 60) + '%'; f.style.top = (10 + Math.random() * 50) + '%'; st.appendChild(f); setTimeout(() => f.remove(), 600); if (AC && $('scrHome').classList.contains('on')) noise(.04, .15, 3000); }
@@ -1474,7 +1685,7 @@ async function checkUpdate(){
 setInterval(checkUpdate, 60000); setTimeout(checkUpdate, 4000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
-loadAll(); homeJorge();
+loadAll(); homeJorge(); cargarMisPj();
 (function boot(){
   const q = new URLSearchParams(location.search), code = (q.get('s') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   if (code){
