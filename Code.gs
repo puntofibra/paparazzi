@@ -41,6 +41,9 @@ function rutear_(d) {
       case 'pjImg': return pjImg_(d);
       case 'precio': return { ok: true, precio: precio_() };
       case 'admPrecio': return admPrecio_(d);
+      case 'admLlaves': return admLlaves_(d);
+      case 'admLlaveAdd': return conLock_(() => admLlaveAdd_(d));
+      case 'admLlaveDel': return conLock_(() => admLlaveDel_(d));
       default: return { ok: true, juego: 'PAPARAZZI' };
     }
   } catch (err) {
@@ -361,10 +364,10 @@ function admLlave_(d) {
     list.push(h); PropertiesService.getScriptProperties().setProperty('llaves', JSON.stringify(list)); nueva = true;
   }
   const t = Utilities.getUuid().replace(/-/g, '');
-  CacheService.getScriptCache().put('adm_' + t, '1', 14400);
+  CacheService.getScriptCache().put('adm_' + t, h, 14400); guardaIdLlave_(h, llave);
   return { ok: true, adm: t, nueva };
 }
-function esAdm_(d) { if (!d.adm || CacheService.getScriptCache().get('adm_' + d.adm) !== '1') throw new Error('Sesión de admin caducada: vuelve a pasar la llave'); }
+function esAdm_(d) { const v = d.adm && CacheService.getScriptCache().get('adm_' + d.adm); if (!v) throw new Error('Sesión de admin caducada: vuelve a pasar la llave'); return v; }
 function admLista_(d) {
   esAdm_(d); pjLimpiaCache_();
   return { ok: true, pjs: pjTodos_().map(P => ({ id: P.id, n: P.n, code: P.code, activo: P.activo, nPoses: P.poses.length, icon: pjPub_(P).icon })) };
@@ -472,4 +475,34 @@ function admPrecio_(d) {
   if (!(n >= 0.5 && n <= 999)) return { ok: false, error: 'Precio no válido' };
   PropertiesService.getScriptProperties().setProperty('precio', String(n));
   return { ok: true, precio: n };
+}
+
+/* ---------- llaves NFC del admin: ver, añadir y quitar ----------
+   'llaves' = huellas (sha) de las llaves válidas · 'llavesId' = {huella: id de la llave} para poder enseñarla */
+function idsLlaves_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('llavesId') || '{}'); } catch (e) { return {}; } }
+function guardaIdLlave_(h, id) { const m = idsLlaves_(); if (m[h] !== id) { m[h] = id; PropertiesService.getScriptProperties().setProperty('llavesId', JSON.stringify(m)); } }
+const limpiaLlave_ = s => String(s || '').toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 40);
+function admLlaves_(d) {
+  const yo = esAdm_(d), m = idsLlaves_();
+  return { ok: true, llaves: llaves_().map(h => ({ h, id: m[h] || '', yo: h === yo })) };
+}
+function admLlaveAdd_(d) {
+  esAdm_(d);
+  const llave = limpiaLlave_(d.llave);
+  if (llave.length < 6) return { ok: false, error: 'ID de llave no válido' };
+  const list = llaves_(), h = sha_('paparazzi|' + llave);
+  if (list.indexOf(h) >= 0) return { ok: false, error: 'Esa llave ya está añadida' };
+  if (list.length >= 10) return { ok: false, error: 'Máximo 10 llaves' };
+  list.push(h); PropertiesService.getScriptProperties().setProperty('llaves', JSON.stringify(list));
+  guardaIdLlave_(h, llave);
+  return admLlaves_(d);
+}
+function admLlaveDel_(d) {
+  esAdm_(d);
+  const list = llaves_(), h = String(d.h || '');
+  if (list.indexOf(h) < 0) return { ok: false, error: 'Esa llave no existe' };
+  if (list.length <= 1) return { ok: false, error: 'Tiene que quedar al menos una llave' };
+  PropertiesService.getScriptProperties().setProperty('llaves', JSON.stringify(list.filter(x => x !== h)));
+  const m = idsLlaves_(); delete m[h]; PropertiesService.getScriptProperties().setProperty('llavesId', JSON.stringify(m));
+  return admLlaves_(d);
 }

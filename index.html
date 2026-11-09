@@ -264,6 +264,9 @@ body.inGame .pTop{padding-right:62px}
 .ppAcc{display:flex;gap:4px;margin-top:4px}.ppAcc button{flex:1;padding:5px 0;border-radius:8px;background:rgba(255,255,255,.1);border:1px solid var(--line);font-size:14px}
 .ppTools{display:flex;gap:6px;margin-top:10px}.ppTools button{flex:1;font-size:12px;font-weight:800;padding:9px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
 .ppTools button.on{background:var(--yellow);color:#3a1a00}.ppTools button:disabled{opacity:.4}
+.llRow{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:rgba(0,0,0,.3);border:1px solid var(--line);margin-bottom:8px}.llRow.yo{border-color:var(--yellow)}
+.llIc{font-size:24px}.llTx{flex:1;min-width:0}.llTx b{display:block;font:400 14px Bungee;letter-spacing:1px;word-break:break-all}.llTx small{color:var(--mute);font-size:11px;font-weight:700}
+.llDel{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:13px;font-weight:800}.llDel.sure{background:#e0234a;color:#fff}.llDel:disabled{opacity:.3}
 .aBtns button{font-size:12px;font-weight:800;padding:6px 9px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
 .aBtns button.red{border-color:#ff5577;color:#ff8aa0}
 .mPrompt{width:100%;box-sizing:border-box;height:46vh;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:#e6d6ff;font:500 12px/1.45 ui-monospace,monospace;padding:10px;resize:none}
@@ -461,7 +464,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.14';
+const VERSION = '2026-11-09.15';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -1223,12 +1226,13 @@ function pintaAdmin(){
       <div class="aBtns"><button data-a="pos" data-id="${p.id}">📷 Poses</button><button data-a="ren" data-id="${p.id}">✏️ Nombre</button><button data-a="cod" data-id="${p.id}">🔄 Código</button><button data-a="act" data-id="${p.id}">${p.activo ? '🚫 Desactivar' : '✅ Activar'}</button><button class="red" data-a="del" data-id="${p.id}">🗑️</button></div></div>
     <div class="cd" data-a="copy" data-c="${p.code}">${p.code}</div></div>`).join('');
   const m = modal(`<h3>🔑 PANEL ADMIN</h3><p class="mSub">Personajes con código · Jorge es fijo y lo tiene todo el mundo. Toca un código para copiarlo.</p>
-    <button class="btn y" id="apPrompt">📝 PROMPT</button><button class="btn alt" id="apPrecio">💶 PRECIO DEL PERSONAJE: ${precioTxt()}</button>
+    <button class="btn y" id="apPrompt">📝 PROMPT</button><button class="btn alt" id="apLlaves">🔑 LLAVES NFC</button><button class="btn alt" id="apPrecio">💶 PRECIO DEL PERSONAJE: ${precioTxt()}</button>
     <div style="margin-top:14px">${rows || '<p class="mSub">Todavía no hay personajes extra</p>'}</div>
     <button class="btn c" id="apNew">＋ NUEVO PERSONAJE</button><button class="btn alt" id="apOut">🚪 CERRAR SESIÓN ADMIN</button><button class="btn alt" id="apNo">CERRAR</button>`);
   m.querySelector('#apNo').onclick = cerrarModal;
   m.querySelector('#apOut').onclick = () => { ADM = ''; try{ sessionStorage.removeItem('pz_adm'); }catch(e){} cerrarModal(); toast('Sesión de admin cerrada', 'info'); };
   m.querySelector('#apPrompt').onclick = verPrompt;
+  m.querySelector('#apLlaves').onclick = () => verLlaves();
   m.querySelector('#apPrecio').onclick = async () => {
     const v = await pedirTexto('💶 PRECIO DEL PERSONAJE', 'Lo que se cobra por crear un personaje propio. Cambia el precio que se ve, el pago de myPOS y el mensaje de WhatsApp. Ejemplo: 12,50', precioTxt().replace('€', ''));
     if (!v) return pintaAdmin();
@@ -1464,6 +1468,37 @@ function autoSepara(poses){
   return poses;
 }
 
+/* ---------- panel admin: llaves NFC (ver su ID, añadir y quitar) ---------- */
+const fmtLlave = id => id ? id.toUpperCase().match(/.{1,2}/g).join(':') : '';
+async function verLlaves(lista){
+  if (!lista){ modal('<h3>🔑 LLAVES NFC</h3><p class="mSub">Cargando…</p>'); try{ lista = (await adm('admLlaves')).llaves; }catch(e){ return pintaAdmin(); } }
+  const hay = 'NDEFReader' in window;
+  const filas = lista.map((l, i) => `<div class="llRow${l.yo ? ' yo' : ''}"><div class="llIc">🔑</div><div class="llTx"><b>${l.id ? fmtLlave(l.id) : 'Llave ' + (i + 1)}</b><small>${l.yo ? '✅ Es la llave con la que has entrado' : (l.id ? 'Llave guardada' : 'ID desconocido: pásala para entrar y se verá aquí')}</small></div>
+    <button class="llDel" data-h="${l.h}" ${lista.length <= 1 ? 'disabled title="Tiene que quedar al menos una"' : ''}>🗑️</button></div>`).join('');
+  const m = modal(`<h3>🔑 LLAVES NFC</h3><p class="mSub">Las llaves que pueden abrir este panel. Tiene que quedar al menos una.</p>
+    <div>${filas}</div><p class="mSub" id="llTxt" style="margin-top:12px"></p>
+    ${hay ? '<button class="btn c" id="llAdd">➕ AÑADIR LLAVE (ACERCARLA)</button>' : ''}<button class="btn alt" id="llMano">⌨️ AÑADIR ESCRIBIENDO SU ID</button><button class="btn alt" id="llBk">⬅️ VOLVER</button>`);
+  const txt = t => { const e = $('llTxt'); if (e) e.textContent = t; };
+  const anade = async id => {
+    try{ const r = await adm('admLlaveAdd', { llave: id }); pararNfc(); SFX.ding(); toast('🔑 Llave añadida', 'ok'); verLlaves(r.llaves); }
+    catch(e){ nfcBusy = false; txt('❌ ' + (e.message || 'No se pudo añadir')); }
+  };
+  m.querySelector('#llBk').onclick = () => { pararNfc(); pintaAdmin(); };
+  if (hay) m.querySelector('#llAdd').onclick = () => escucharNfc(serial => anade(serial), t => txt(/Acerca/.test(t) ? '📡 Acerca la llave NUEVA a la parte de atrás del móvil' : t));
+  m.querySelector('#llMano').onclick = async () => {
+    pararNfc();
+    const v = await pedirTexto('⌨️ ID DE LA LLAVE', 'Escribe el número de serie de la llave (por ejemplo 04:A2:5B:1C:7F:61:80)', '');
+    if (!v) return verLlaves(lista);
+    const id = v.toLowerCase().replace(/[^0-9a-f]/g, '');
+    if (id.length < 6){ toast('Ese ID no es válido', 'err'); return verLlaves(lista); }
+    try{ const r = await adm('admLlaveAdd', { llave: id }); toast('🔑 Llave añadida', 'ok'); verLlaves(r.llaves); }catch(e){ verLlaves(lista); }
+  };
+  m.querySelectorAll('.llDel').forEach(b => b.onclick = async () => {
+    const l = lista.find(x => x.h === b.dataset.h); if (!l) return;
+    if (b.dataset.ok !== '1'){ b.dataset.ok = '1'; b.textContent = '¿Borrar?'; b.classList.add('sure'); return; }
+    try{ const r = await adm('admLlaveDel', { h: l.h }); toast('🗑️ Llave quitada', 'info'); verLlaves(r.llaves); }catch(e){ verLlaves(lista); }
+  });
+}
 /* ---------- panel admin: subir la imagen de las 10 poses desde el móvil ---------- */
 function verPoses(pid){
   const p = ADMPJ.find(x => x.id === pid); if (!p) return pintaAdmin();
