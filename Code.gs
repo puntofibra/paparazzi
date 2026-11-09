@@ -42,6 +42,15 @@ function rutear_(d) {
       case 'precio': return { ok: true, precio: precio_() };
       case 'admPrecio': return admPrecio_(d);
       case 'admLlaves': return admLlaves_(d);
+      // escenarios
+      case 'escPub': return escPublicos_();
+      case 'escCodigo': return escCodigo_(d);
+      case 'escVarios': return escVarios_(d);
+      case 'admEscLista': return admEscLista_(d);
+      case 'admEscNuevo': return conLock_(() => admEscNuevo_(d));
+      case 'admEscGuardar': return conLock_(() => admEscGuardar_(d));
+      case 'admEscBorrar': return conLock_(() => admEscBorrar_(d));
+      case 'admEscOcultar': return conLock_(() => admEscOcultar_(d));
       case 'admLlaveAdd': return conLock_(() => admLlaveAdd_(d));
       case 'admLlaveDel': return conLock_(() => admLlaveDel_(d));
       default: return { ok: true, juego: 'PAPARAZZI' };
@@ -263,7 +272,7 @@ function acc_(d) {
     if (st.fase === 'final') st.jug = activos_(st, now);
     st.jug.forEach(j => j.pts = 0);
     st.ronda = 0; st.R = []; st.fotos = {}; st.votos = {}; st.hist = []; st.nof = {}; st.gal = []; st.tomas = {};
-    st.esc = (Array.isArray(d.esc) ? d.esc : []).map(Number).filter(x => x >= 0 && x < 200).slice(0, 20);
+    const ep = escPartida_(d.esc, d.escCodes); st.esc = ep.esc; st.escDefs = ep.defs;
     empezarRonda_(st, now);
   } else if (a === 'lobby' && me.id === st.host && st.fase === 'final') {
     st.fase = 'lobby'; st.jug = activos_(st, now); st.jug.forEach(j => j.pts = 0);
@@ -373,7 +382,7 @@ function admLista_(d) {
   return { ok: true, pjs: pjTodos_().map(P => ({ id: P.id, n: P.n, code: P.code, activo: P.activo, nPoses: P.poses.length, icon: pjPub_(P).icon })) };
 }
 function codigoNuevo_() {
-  const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', usados = pjTodos_().map(p => p.code);
+  const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', usados = pjTodos_().map(p => p.code).concat(escTodos_().map(e => e.code).filter(Boolean));
   for (let k = 0; k < 200; k++) { let c = ''; for (let i = 0; i < 4; i++) c += L[Math.floor(Math.random() * L.length)]; if (usados.indexOf(c) < 0) return c; }
   throw new Error('No hay códigos libres');
 }
@@ -384,7 +393,7 @@ function admGuardar_(d) {
   let code = d.code === 'NUEVO' ? codigoNuevo_() : limpiaCod_(d.code);
   if (d.code && d.code !== 'NUEVO' && code.length !== 4) return { ok: false, error: 'El código debe tener 4 letras o números' };
   const P = d.id ? todos.find(x => x.id === String(d.id)) : null;
-  if (code && todos.some(x => x.code === code && (!P || x.id !== P.id))) return { ok: false, error: 'Ese código ya lo tiene otro personaje' };
+  if (code && (todos.some(x => x.code === code && (!P || x.id !== P.id)) || escTodos_().some(e => e.code === code))) return { ok: false, error: 'Ese código ya lo tiene otro personaje o escenario' };
   if (P) {
     if (n) sh.getRange(P.fila, 2).setValue(n);
     if (code) sh.getRange(P.fila, 3).setValue(code);
@@ -462,7 +471,7 @@ function admPoses_(d) {
 function pjImg_(d) {
   const id = String(d.id || '').replace(/[^\w-]/g, ''), f = 'gd:' + id;
   // solo se sirven imágenes que sean poses de algún personaje
-  if (!id || !pjTodos_().some(P => P.icon === f || P.poses.some(p => p.f === f))) return { ok: false, error: 'Imagen no encontrada' };
+  if (!id || !(pjTodos_().some(P => P.icon === f || P.poses.some(p => p.f === f)) || escTodos_().some(E => E.f === f))) return { ok: false, error: 'Imagen no encontrada' };
   return { ok: true, b64: Utilities.base64Encode(DriveApp.getFileById(id).getBlob().getBytes()) };
 }
 function autorizarDrive() { DriveApp.getRootFolder(); }
@@ -505,4 +514,111 @@ function admLlaveDel_(d) {
   PropertiesService.getScriptProperties().setProperty('llaves', JSON.stringify(list.filter(x => x !== h)));
   const m = idsLlaves_(); delete m[h]; PropertiesService.getScriptProperties().setProperty('llavesId', JSON.stringify(m));
   return admLlaves_(d);
+}
+
+/* =========================================================
+   ESCENARIOS NUEVOS (hoja "Escenarios") y escenarios de serie ocultos
+   num | nombre | codigo ('' = público para todos) | f (gd:<id> en Drive) | activo | creado
+   Los de serie (0..99) están en la web; los nuevos empiezan en el 100.
+   ========================================================= */
+const ESC_COLS = ['num', 'nombre', 'codigo', 'f', 'activo', 'creado'];
+function hojaEsc_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName('Escenarios');
+  if (!sh) { sh = ss.insertSheet('Escenarios'); sh.appendRow(ESC_COLS); sh.setFrozenRows(1); }
+  return sh;
+}
+function escTodos_() {
+  const c = CacheService.getScriptCache(), s = c.get('esc_todos');
+  if (s) return JSON.parse(s);
+  const v = hojaEsc_().getDataRange().getValues(), out = [];
+  for (let i = 1; i < v.length; i++) {
+    if (!v[i][0]) continue;
+    out.push({ fila: i + 1, num: Number(v[i][0]), n: String(v[i][1]), code: String(v[i][2] || '').toUpperCase(), f: String(v[i][3] || ''), activo: v[i][4] !== false && String(v[i][4]).toUpperCase() !== 'NO' && String(v[i][4]).toUpperCase() !== 'FALSE' });
+  }
+  c.put('esc_todos', JSON.stringify(out), 300);
+  return out;
+}
+function escLimpiaCache_() { CacheService.getScriptCache().remove('esc_todos'); }
+const escPubDef_ = E => ({ num: E.num, n: E.n, f: E.f });
+function ocultos_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('escOcultos') || '[]'); } catch (e) { return []; } }
+function escPublicos_() {
+  return { ok: true, pubs: escTodos_().filter(E => E.activo && !E.code && E.f).map(escPubDef_), ocultos: ocultos_() };
+}
+function escPorCodigo_(code) {
+  code = limpiaCod_(code); if (code.length !== 4) return null;
+  return escTodos_().find(E => E.code === code && E.activo && E.f) || null;
+}
+function escCodigo_(d) {
+  freno_('esccod', 120, 600);
+  const E = escPorCodigo_(d.code);
+  if (!E) return { ok: false, error: 'Ese código no existe' };
+  return { ok: true, code: E.code, esc: escPubDef_(E) };
+}
+function escVarios_(d) {
+  const codes = (Array.isArray(d.codes) ? d.codes : []).slice(0, 30).map(limpiaCod_), res = [];
+  codes.forEach(c => { const E = escPorCodigo_(c); if (E) res.push({ code: E.code, esc: escPubDef_(E) }); });
+  return { ok: true, escs: res };
+}
+// escenarios que entran en una partida: los de serie no ocultos, los nuevos públicos y los de código que tenga el anfitrión
+function escPartida_(lista, codes) {
+  const oc = ocultos_(), todos = escTodos_(), cs = (Array.isArray(codes) ? codes : []).map(limpiaCod_), defs = [], esc = [];
+  (Array.isArray(lista) ? lista : []).slice(0, 40).map(Number).forEach(x => {
+    if (!(x >= 0) || x !== Math.floor(x)) return;
+    if (x < 100) { if (oc.indexOf(x) < 0) esc.push(x); return; }
+    const E = todos.find(e => e.num === x && e.activo && e.f);
+    if (E && (!E.code || cs.indexOf(E.code) >= 0)) { esc.push(x); defs.push(escPubDef_(E)); }
+  });
+  return { esc: esc.slice(0, 20), defs };
+}
+function admEscLista_(d) {
+  esAdm_(d); escLimpiaCache_();
+  return { ok: true, escs: escTodos_().map(E => ({ num: E.num, n: E.n, code: E.code, f: E.f, activo: E.activo })), ocultos: ocultos_() };
+}
+function carpetaEsc_() {
+  const props = PropertiesService.getScriptProperties(), rid = props.getProperty('carpetaEsc');
+  let f = null;
+  try { if (rid) f = DriveApp.getFolderById(rid); } catch (e) {}
+  if (!f) { f = DriveApp.createFolder('PAPARAZZI escenarios'); props.setProperty('carpetaEsc', f.getId()); }
+  return f;
+}
+function admEscNuevo_(d) {
+  esAdm_(d); escLimpiaCache_();
+  const n = String(d.n || '').replace(/[<>"'`]/g, '').trim().slice(0, 30);
+  if (!n) return { ok: false, error: 'Ponle un nombre al escenario' };
+  const b64 = String(d.b64 || '').replace(/^data:image\/\w+;base64,/, '');
+  if (b64.length < 1000 || b64.length > 8000000) return { ok: false, error: 'Imagen no válida' };
+  const todos = escTodos_(), num = Math.max(99, ...todos.map(E => E.num)) + 1;
+  const file = carpetaEsc_().createFile(Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', 'escenario_' + num + '.jpg'));
+  const code = d.publico ? '' : codigoNuevo_();
+  hojaEsc_().appendRow([num, n, code, 'gd:' + file.getId(), 'SI', new Date()]);
+  escLimpiaCache_();
+  const r = admEscLista_(d); r.nuevo = { num, code }; return r;
+}
+function admEscGuardar_(d) {
+  esAdm_(d); escLimpiaCache_();
+  const E = escTodos_().find(x => x.num === Number(d.num));
+  if (!E) return { ok: false, error: 'Escenario no encontrado' };
+  const sh = hojaEsc_();
+  if (d.n) sh.getRange(E.fila, 2).setValue(String(d.n).replace(/[<>"'`]/g, '').trim().slice(0, 30));
+  if (d.publico === true) sh.getRange(E.fila, 3).setValue('');
+  else if (d.publico === false || d.code === 'NUEVO') sh.getRange(E.fila, 3).setValue(codigoNuevo_());
+  if (d.activo != null) sh.getRange(E.fila, 5).setValue(d.activo ? 'SI' : 'NO');
+  escLimpiaCache_();
+  return admEscLista_(d);
+}
+function admEscBorrar_(d) {
+  esAdm_(d); escLimpiaCache_();
+  const E = escTodos_().find(x => x.num === Number(d.num));
+  if (E) { try { if (/^gd:/.test(E.f)) DriveApp.getFileById(E.f.slice(3)).setTrashed(true); } catch (e) {} hojaEsc_().deleteRow(E.fila); }
+  escLimpiaCache_();
+  return admEscLista_(d);
+}
+// ocultar / recuperar un escenario de serie para todos
+function admEscOcultar_(d) {
+  esAdm_(d);
+  const i = Number(d.i); if (!(i >= 0 && i < 100)) return { ok: false, error: 'Escenario no válido' };
+  let oc = ocultos_().filter(x => x !== i); if (d.ocultar) oc.push(i);
+  PropertiesService.getScriptProperties().setProperty('escOcultos', JSON.stringify(oc));
+  return admEscLista_(d);
 }

@@ -264,6 +264,14 @@ body.inGame .pTop{padding-right:62px}
 .ppAcc{display:flex;gap:4px;margin-top:4px}.ppAcc button{flex:1;padding:5px 0;border-radius:8px;background:rgba(255,255,255,.1);border:1px solid var(--line);font-size:14px}
 .ppTools{display:flex;gap:6px;margin-top:10px}.ppTools button{flex:1;font-size:12px;font-weight:800;padding:9px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
 .ppTools button.on{background:var(--yellow);color:#3a1a00}.ppTools button:disabled{opacity:.4}
+.esRow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:14px;background:rgba(0,0,0,.3);border:1px solid var(--line);margin-bottom:8px}.esRow.off{opacity:.5}
+.esRow img{width:84px;height:47px;object-fit:cover;border-radius:8px;flex:none;border:1px solid var(--line)}
+.esRow .nm{flex:1;min-width:0}.esRow .nm b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.esRow .nm small{color:var(--mute);font-size:11px;font-weight:700}
+.esRow .cd{font:400 18px Bungee;color:var(--yellow);letter-spacing:2px}.esOc{font-size:12px;font-weight:800;padding:7px 9px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line);flex:none}
+.esSec{font:400 13px Bungee;letter-spacing:3px;color:var(--mute);margin:16px 0 8px;text-align:center}
+.enPrev img{width:100%;border-radius:12px;margin-top:10px;border:1px solid var(--line)}
+.esCode{font:400 44px Bungee;color:var(--yellow);letter-spacing:8px;margin:6px 0 4px}
+.aBtns button.sure{background:#e0234a;color:#fff}
 .llRow{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:rgba(0,0,0,.3);border:1px solid var(--line);margin-bottom:8px}.llRow.yo{border-color:var(--yellow)}
 .llIc{font-size:24px}.llTx{flex:1;min-width:0}.llTx b{display:block;font:400 14px Bungee;letter-spacing:1px;word-break:break-all}.llTx small{color:var(--mute);font-size:11px;font-weight:700}
 .llDel{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-size:13px;font-weight:800}.llDel.sure{background:#e0234a;color:#fff}.llDel:disabled{opacity:.3}
@@ -464,7 +472,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-10.4';
+const VERSION = '2026-11-10.5';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -643,12 +651,29 @@ function loadAll(){
   if (LOGO_OK) loadImg('logo.png', im => { $('logoImg').src = im.src; $('logoImg').style.display = 'block'; $('logoTxt').style.display = 'none'; });
 }
 const poseImg = p => IMG[p.f];
+// escenarios nuevos (subidos desde el panel admin): número 100 en adelante
+const ESC_EXTRA = {};
+let ESC_PUB = [], ESC_OCULTOS = [];
+const escena = i => (i >= 100 && ESC_EXTRA[i]) ? ESC_EXTRA[i] : ESCENAS[(i >= 100 ? 0 : i) % ESCENAS.length];
+function addEsc(def){
+  if (!def || !(def.num >= 100)) return;
+  if (!ESC_EXTRA[def.num]){ ESC_EXTRA[def.num] = { n: def.n, f: def.f, th: 'city', sky: ['#7fd0ff', '#fff1d0'], gr: '#d9d4c7' }; if (def.f) loadImg(def.f); }
+  else ESC_EXTRA[def.num].n = def.n;
+}
+const misEsc = () => (LS.get('escs', []) || []).filter(x => x && x.code && x.num);
+async function cargarEscenarios(){
+  const r = await api('escPub', {}, 15000);
+  if (r && r.ok && Array.isArray(r.pubs)){ ESC_PUB = r.pubs.map(x => x.num); r.pubs.forEach(addEsc); ESC_OCULTOS = r.ocultos || []; }
+  const mis = misEsc(); if (!mis.length) return;
+  const r2 = await api('escVarios', { codes: mis.map(x => x.code) }, 15000);
+  if (r2 && r2.ok && Array.isArray(r2.escs)){ const vale = r2.escs.map(x => x.code); LS.set('escs', mis.filter(x => vale.includes(x.code))); r2.escs.forEach(x => addEsc(x.esc)); }
+}
 
 /* ---------- fondos provisionales dibujados (hasta tener las imágenes) ---------- */
 const WW = 1600, WH = 900, GROUND = 868;
 const bgCache = {};
 function bgCanvas(i){
-  const E = ESCENAS[i % ESCENAS.length];
+  const E = escena(i);
   if (IMG[E.f]) return IMG[E.f];
   if (bgCache[i]) return bgCache[i];
   const c = document.createElement('canvas'); c.width = WW; c.height = WH;
@@ -1141,7 +1166,7 @@ const waPagoUrl = () => 'https://wa.me/34633200100?text=' + encodeURIComponent('
 async function cargarPrecio(){ const r = await api('precio', {}, 15000); if (r && r.ok && r.precio > 0){ PRECIO = Number(r.precio); LS.set('precio', PRECIO); } }
 /* ---------- añadir / editar personaje con código ---------- */
 function anadirPj(){
-  const m = modal(`<h3>➕ AÑADIR PERSONAJE</h3><p class="mSub">Escribe el código de 4 caracteres que te han dado para desbloquear tu personaje personalizado</p>
+  const m = modal(`<h3>➕ AÑADIR PERSONAJE</h3><p class="mSub">Escribe el código de 4 caracteres que te han dado para desbloquear tu personaje o tu escenario</p>
     <input class="mIn" id="pcIn" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="····"><div class="mErr" id="pcErr"></div>
     <button class="btn y" id="pcOk">🔓 DESBLOQUEAR</button>
     <div class="wpOr">¿NO TIENES CÓDIGO?</div>
@@ -1164,8 +1189,18 @@ function anadirPj(){
     const c = inp.value; if (c.length !== 4){ m.querySelector('#pcErr').textContent = 'El código tiene 4 letras o números'; return; }
     m.querySelector('#pcOk').disabled = true;
     const r = await api('pjCodigo', { code: c });
+    if (!r.ok){
+      // ¿es el código de un escenario?
+      const e = await api('escCodigo', { code: c });
+      m.querySelector('#pcOk').disabled = false;
+      if (e.ok && e.esc){
+        addEsc(e.esc); LS.set('escs', misEsc().filter(x => x.num !== e.esc.num).concat([{ code: e.code, num: e.esc.num }]));
+        cerrarModal(); SFX.ding(); confetti(80); toast('🏞️ ¡Has desbloqueado el escenario ' + e.esc.n + '! Saldrá en las partidas que crees tú.', 'ok', 4500);
+        return;
+      }
+      m.querySelector('#pcErr').textContent = r.error || 'Código no válido'; SFX.click(); return;
+    }
     m.querySelector('#pcOk').disabled = false;
-    if (!r.ok){ m.querySelector('#pcErr').textContent = r.error || 'Código no válido'; SFX.click(); return; }
     const p = addPj(r.pj, r.code); if (!p) return;
     LS.set('pjs', misPj().filter(x => x.id !== p.id).concat([{ code: r.code, id: p.id }]));
     cerrarModal(); SFX.ding(); confetti(80); toast('🎉 ¡Has desbloqueado a ' + p.n + '!', 'ok');
@@ -1236,8 +1271,8 @@ function abrirAdmin(){
   escucharNfc(ok, txt);
   const b = m.querySelector('#nfBtn'); if (b) b.onclick = () => escucharNfc(ok, txt);
 }
-async function adm(accion, d){
-  const r = await api(accion, Object.assign({ adm: ADM }, d || {}), 20000);
+async function adm(accion, d, ms){
+  const r = await api(accion, Object.assign({ adm: ADM }, d || {}), ms || 20000);
   if (!r.ok){ if (/caducada/.test(r.error || '')){ ADM = ''; try{ sessionStorage.removeItem('pz_adm'); }catch(e){} cerrarModal(); toast(r.error, 'err'); abrirAdmin(); } else toast(r.error || 'Error', 'err'); throw new Error(r.error); }
   return r;
 }
@@ -1253,13 +1288,14 @@ function pintaAdmin(){
       <div class="aBtns"><button data-a="pos" data-id="${p.id}">📷 Poses</button><button data-a="ren" data-id="${p.id}">✏️ Nombre</button><button data-a="cod" data-id="${p.id}">🔄 Código</button><button data-a="act" data-id="${p.id}">${p.activo ? '🚫 Desactivar' : '✅ Activar'}</button><button class="red" data-a="del" data-id="${p.id}">🗑️</button></div></div>
     <div class="cd" data-a="copy" data-c="${p.code}">${p.code}</div></div>`).join('');
   const m = modal(`<h3>🔑 PANEL ADMIN</h3><p class="mSub">Personajes con código · Jorge es fijo y lo tiene todo el mundo. Toca un código para copiarlo.</p>
-    <button class="btn y" id="apPrompt">📝 PROMPT</button><button class="btn alt" id="apLlaves">🔑 LLAVES NFC</button><button class="btn alt" id="apPrecio">💶 PRECIO DEL PERSONAJE: ${precioTxt()}</button>
+    <button class="btn y" id="apPrompt">📝 PROMPT</button><button class="btn c" id="apEsc">🏞️ ESCENARIOS</button><button class="btn alt" id="apLlaves">🔑 LLAVES NFC</button><button class="btn alt" id="apPrecio">💶 PRECIO DEL PERSONAJE: ${precioTxt()}</button>
     <div style="margin-top:14px">${rows || '<p class="mSub">Todavía no hay personajes extra</p>'}</div>
     <button class="btn c" id="apNew">＋ NUEVO PERSONAJE</button><button class="btn alt" id="apOut">🚪 CERRAR SESIÓN ADMIN</button><button class="btn alt" id="apNo">CERRAR</button>`);
   m.querySelector('#apNo').onclick = cerrarModal;
   m.querySelector('#apOut').onclick = () => { ADM = ''; try{ sessionStorage.removeItem('pz_adm'); }catch(e){} cerrarModal(); toast('Sesión de admin cerrada', 'info'); };
   m.querySelector('#apPrompt').onclick = verPrompt;
   m.querySelector('#apLlaves').onclick = () => verLlaves();
+  m.querySelector('#apEsc').onclick = verEscenarios;
   m.querySelector('#apPrecio').onclick = async () => {
     const v = await pedirTexto('💶 PRECIO DEL PERSONAJE', 'Lo que se cobra por crear un personaje propio. Cambia el precio que se ve, el pago de myPOS y el mensaje de WhatsApp. Ejemplo: 12,50', precioTxt().replace('€', ''));
     if (!v) return pintaAdmin();
@@ -1495,6 +1531,95 @@ function autoSepara(poses){
   return poses;
 }
 
+/* ---------- panel admin: escenarios (los de serie se pueden ocultar; los nuevos se suben desde aquí) ---------- */
+const PROMPT_ESC = "Usa la foto adjunta como referencia del lugar. Conviértela en un fondo de dibujo animado para un videojuego, con el mismo estilo de caricatura que un sticker de WhatsApp de calidad: contorno negro grueso y limpio, colores planos y vivos con sombreado suave, y formas un poco redondeadas y exageradas.\n\nMantén el lugar reconocible: los edificios, monumentos, muebles, plantas y detalles que lo hacen especial, con la misma distribución que en la foto.\n\nMUY IMPORTANTE:\n- Quita a TODAS las personas que salgan en la foto, y también los animales y los coches que estén en primer plano. El lugar tiene que quedar vacío, sin nadie.\n- Rellena con naturalidad los huecos donde estaban las personas, como si nunca hubieran estado ahí.\n- Imagen horizontal, en formato 16:9 (por ejemplo, 1600 × 900 píxeles).\n- Vista frontal, a la altura de los ojos, como si estuvieras de pie en el lugar.\n- En la parte de abajo, deja un suelo plano y despejado de lado a lado, donde un personaje pueda caminar.\n- Sin texto, sin logotipos, sin marcas de agua y sin marcos.";
+let ADMESC = { escs: [], ocultos: [] };
+async function verEscenarios(){
+  modal('<h3>🏞️ ESCENARIOS</h3><p class="mSub">Cargando…</p>');
+  try{ const r = await adm('admEscLista'); if (!Array.isArray(r.escs)){ toast('El servidor aún no tiene la versión nueva: hay que publicar la implementación del Apps Script', 'err', 5000); return pintaAdmin(); } ADMESC = r; }catch(e){ return pintaAdmin(); }
+  pintaEsc();
+}
+function pintaEsc(){
+  const nuevos = ADMESC.escs.map(E => `<div class="esRow ${E.activo ? '' : 'off'}"><img src="${E.f}" alt="">
+    <div class="nm"><b>${esc(E.n)}</b><small>${E.code ? '🔒 Con código' : '🌍 Público para todos'}${E.activo ? '' : ' · DESACTIVADO'}</small>
+      <div class="aBtns"><button data-e="ren" data-n="${E.num}">✏️ Nombre</button><button data-e="pub" data-n="${E.num}">${E.code ? '🌍 Hacer público' : '🔒 Poner código'}</button>${E.code ? `<button data-e="cod" data-n="${E.num}">🔄 Código</button>` : ''}<button data-e="act" data-n="${E.num}">${E.activo ? '🚫 Desactivar' : '✅ Activar'}</button><button class="red" data-e="del" data-n="${E.num}">🗑️</button></div></div>
+    ${E.code ? `<div class="cd" data-e="copy" data-c="${E.code}">${E.code}</div>` : ''}</div>`).join('');
+  const serie = ESCENAS.map((E, i) => E.f ? `<div class="esRow ${ADMESC.ocultos.includes(i) ? 'off' : ''}"><img src="${E.f}?v=${VERSION}" alt="">
+    <div class="nm"><b>${esc(E.n)}</b><small>${ADMESC.ocultos.includes(i) ? '🙈 Oculto: no sale en las partidas' : '🌍 De serie, para todos'}</small></div>
+    <button class="esOc" data-e="oc" data-i="${i}">${ADMESC.ocultos.includes(i) ? '👁️ Mostrar' : '🙈 Ocultar'}</button></div>` : '').join('');
+  const m = modal(`<h3>🏞️ ESCENARIOS</h3><p class="mSub">Los públicos salen a todo el mundo. Los que tienen código, solo a quien meta ese código (toca el código para copiarlo).</p>
+    <button class="btn y" id="esPrompt">📝 PROMPT ESCENARIO</button><button class="btn c" id="esNew">＋ NUEVO ESCENARIO</button>
+    <div class="esSec">NUEVOS</div>${nuevos || '<p class="mSub">Todavía no has subido ninguno</p>'}
+    <div class="esSec">DE SERIE</div>${serie}
+    <button class="btn alt" id="esBk">⬅️ VOLVER</button>`);
+  m.querySelector('#esBk').onclick = pintaAdmin;
+  m.querySelector('#esPrompt').onclick = () => {
+    const p = modal(`<h3>📝 PROMPT PARA GEMINI</h3><p class="mSub">Sube a Gemini la foto del lugar y pega este texto. Luego sube aquí la imagen que te dé con ＋ NUEVO ESCENARIO.</p>
+      <textarea class="mPrompt" readonly id="epTx"></textarea><button class="btn y" id="epCp">📋 COPIAR PROMPT</button><button class="btn alt" id="epBk">⬅️ VOLVER</button>`);
+    p.querySelector('#epTx').value = PROMPT_ESC;
+    p.querySelector('#epCp').onclick = () => copiar(PROMPT_ESC);
+    p.querySelector('#epBk').onclick = pintaEsc;
+  };
+  m.querySelector('#esNew').onclick = nuevoEscenario;
+  m.querySelectorAll('[data-e]').forEach(b => b.onclick = async () => {
+    const a = b.dataset.e, E = ADMESC.escs.find(x => x.num === Number(b.dataset.n));
+    if (a === 'copy'){ copiar(b.dataset.c); return; }
+    try{
+      if (a === 'oc'){ const i = Number(b.dataset.i); ADMESC = await adm('admEscOcultar', { i, ocultar: !ADMESC.ocultos.includes(i) }); ESC_OCULTOS = ADMESC.ocultos; }
+      else if (a === 'ren'){ const n = await pedirTexto('✏️ NOMBRE DEL ESCENARIO', '', E.n); if (n) ADMESC = await adm('admEscGuardar', { num: E.num, n }); }
+      else if (a === 'pub'){ ADMESC = await adm('admEscGuardar', { num: E.num, publico: !!E.code }); const E2 = ADMESC.escs.find(x => x.num === E.num); toast(E2 && E2.code ? '🔒 Código: ' + E2.code : '🌍 Ahora es público', 'ok', 3000); }
+      else if (a === 'cod'){ if (b.dataset.ok !== '1'){ b.dataset.ok = '1'; b.textContent = '¿Seguro?'; return; } ADMESC = await adm('admEscGuardar', { num: E.num, code: 'NUEVO' }); toast('🔄 Código nuevo creado. El anterior deja de valer.', 'info', 3000); }
+      else if (a === 'act') ADMESC = await adm('admEscGuardar', { num: E.num, activo: !E.activo });
+      else if (a === 'del'){ if (b.dataset.ok !== '1'){ b.dataset.ok = '1'; b.textContent = '¿Borrar?'; b.classList.add('sure'); return; } ADMESC = await adm('admEscBorrar', { num: E.num }); toast('🗑️ Escenario borrado', 'info'); }
+    }catch(e){}
+    pintaEsc();
+  });
+}
+// recorta la imagen a 16:9 (1600 × 900) rellenando todo el cuadro, y la deja en JPG
+function aEscenario(img){
+  const c = lienzo(WW, WH), x = c.getContext('2d'), iw = img.naturalWidth, ih = img.naturalHeight, k = Math.max(WW / iw, WH / ih);
+  x.imageSmoothingQuality = 'high'; x.drawImage(img, (WW - iw * k) / 2, (WH - ih * k) / 2, iw * k, ih * k); return c;
+}
+function nuevoEscenario(){
+  let cv = null;
+  const m = modal(`<h3>＋ NUEVO ESCENARIO</h3><p class="mSub">Ponle nombre y elige la imagen que te ha hecho Gemini.</p>
+    <input class="mIn txt" id="enN" maxlength="30" placeholder="Nombre (por ejemplo, Egipto)">
+    <label class="btn y ppPick" style="margin-top:10px">📁 ELEGIR IMAGEN<input type="file" accept="image/*" id="enF" hidden></label>
+    <div id="enPrev" class="enPrev"></div><div id="enMsg" class="ppMsg"></div>
+    <div id="enOps" style="display:none"><p class="mSub" style="margin:12px 0 0">¿Quién lo puede usar?</p>
+      <button class="btn c" id="enPub">🌍 PÚBLICO PARA TODOS</button><button class="btn" id="enCod">🔒 CON CÓDIGO (SOLO QUIEN LO TENGA)</button></div>
+    <button class="btn alt" id="enBk">⬅️ VOLVER</button>`);
+  const msg = (t, err) => { const e = m.querySelector('#enMsg'); e.textContent = t; e.classList.toggle('err', !!err); };
+  m.querySelector('#enBk').onclick = pintaEsc;
+  m.querySelector('#enF').onchange = async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try{
+      const url = URL.createObjectURL(f), im = new Image(); im.src = url; await im.decode();
+      cv = aEscenario(im); URL.revokeObjectURL(url);
+      const pv = m.querySelector('#enPrev'); pv.innerHTML = ''; const i2 = new Image(); i2.src = cv.toDataURL('image/jpeg', .7); pv.appendChild(i2);
+      const r = im.naturalWidth / im.naturalHeight;
+      msg(Math.abs(r - 16 / 9) > .12 ? '⚠️ La imagen no es 16:9: se ha recortado para llenar el cuadro. Mira que se vea bien.' : '✅ Así se verá en el juego.', Math.abs(r - 16 / 9) > .12);
+      m.querySelector('#enOps').style.display = '';
+    }catch(err){ msg('No pude abrir esa imagen', true); }
+    e.target.value = '';
+  };
+  const sube = async publico => {
+    const n = m.querySelector('#enN').value.trim();
+    if (!n){ msg('Ponle un nombre al escenario', true); m.querySelector('#enN').focus(); return; }
+    if (!cv) return;
+    m.querySelectorAll('#enOps .btn').forEach(b => b.disabled = true); msg('⏫ Subiendo…');
+    try{
+      const r = await adm('admEscNuevo', { n, publico, b64: cv.toDataURL('image/jpeg', .86).split(',')[1] }, 60000);
+      ADMESC = r; SFX.ding();
+      if (r.nuevo && r.nuevo.code){
+        const d = modal(`<div style="text-align:center"><div class="qIc">🔒</div><h3>${esc(n)}</h3><p class="mSub">Escenario guardado. Da este código a quien quieras que lo tenga:</p><div class="esCode" id="ecC">${r.nuevo.code}</div></div><button class="btn y" id="ecCp">📋 COPIAR CÓDIGO</button><button class="btn alt" id="ecOk">LISTO</button>`);
+        d.querySelector('#ecCp').onclick = () => copiar(r.nuevo.code); d.querySelector('#ecOk').onclick = pintaEsc;
+      } else { toast('🌍 ' + n + ' ya sale para todos', 'ok', 3000); pintaEsc(); }
+    }catch(err){ m.querySelectorAll('#enOps .btn').forEach(b => b.disabled = false); msg('No se pudo subir. Inténtalo otra vez.', true); }
+  };
+  m.querySelector('#enPub').onclick = () => sube(true);
+  m.querySelector('#enCod').onclick = () => sube(false);
+}
 /* ---------- panel admin: llaves NFC (ver su ID, añadir y quitar) ---------- */
 const fmtLlave = id => id ? id.toUpperCase().match(/.{1,2}/g).join(':') : '';
 async function verLlaves(lista){
@@ -1646,6 +1771,7 @@ function pjOf(st){
 const player = id => ST.jug.find(j => j.id === Number(id)) || { n: '¿?', c: '#888' };
 function onState(st){
   const prev = ST; ST = st; paintQuit();
+  if (Array.isArray(st.escDefs)) st.escDefs.forEach(addEsc);   // escenarios nuevos que trae la partida
   PJ = pjOf(st);
   if (st.fase === 'lobby') screenLobby();
   else if (st.fase === 'captura') screenCapture(prev);
@@ -1697,9 +1823,10 @@ async function invitar(){
 function empezar(){
   initAudio(); SFX.go();
   // escenarios en orden aleatorio
-  const conImg = ESCENAS.map((e, i) => e.f ? i : -1).filter(i => i >= 0);
-  const order = (conImg.length ? conImg : ESCENAS.map((_, i) => i)).sort(() => Math.random() - .5);
-  accion('empezar', { esc: order });
+  const conImg = ESCENAS.map((e, i) => e.f && !ESC_OCULTOS.includes(i) ? i : -1).filter(i => i >= 0);
+  const extra = ESC_PUB.concat(misEsc().map(x => x.num)).filter((v, i, a) => a.indexOf(v) === i);
+  const order = (conImg.length || extra.length ? conImg.concat(extra) : ESCENAS.map((_, i) => i)).sort(() => Math.random() - .5);
+  accion('empezar', { esc: order, escCodes: misEsc().map(x => x.code) });
 }
 
 /* ---------- captura ---------- */
@@ -1720,7 +1847,7 @@ function screenCapture(prev){
     $('plRound').textContent = ST.ronda + '/' + ST.cfg.rondas;
     $('plEnc').querySelector('span').textContent = encTxt(plan(capR).enc);
     if (now() < ST.t0) narra((ST.ronda >= ST.cfg.rondas ? 'Última ronda. ' : 'Ronda ' + ST.ronda + ' de ' + ST.cfg.rondas + '. ') + encVoz(plan(capR).enc));
-    $('plScene').textContent = ESCENAS[capR.esc % ESCENAS.length].n.toUpperCase();
+    $('plScene').textContent = escena(capR.esc).n.toUpperCase();
     $('cntTxt').innerHTML = '📰 ' + esc(encTxt(plan(capR).enc)) + '<small>📱 Mueve el móvil para buscar a ' + esc(PJ.n) + ' · 🤏 pellizca para zoom<br>🎯 Toca a ' + esc(PJ.n) + ' para enfocar · ☀️ Ajusta la luz a la derecha<br>🫨 Si mueves el móvil al disparar, ¡sale movida!</small>';
     lastScreen = '';
   }
@@ -2194,7 +2321,7 @@ addEventListener('focus', checkUpdate); addEventListener('pageshow', checkUpdate
 setInterval(aplicaUpdate, 3000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
-loadAll(); homeJorge(); cargarMisPj(); cargarPrecio();
+loadAll(); homeJorge(); cargarMisPj(); cargarPrecio(); cargarEscenarios();
 (function boot(){
   const q = new URLSearchParams(location.search), code = (q.get('s') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   if (code){
