@@ -440,7 +440,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.6';
+const VERSION = '2026-11-09.7';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -485,7 +485,15 @@ function addPj(def, code){
   if (code) p.code = code;
   return p;
 }
+// personaje principal (el que sale en portada y el primero en la lista)
+function pjMain(){ const id = LS.get('pjMain', ''); const p = id && PERSONAJES.find(x => x.id === id); return (p && (!p.extra || p.code)) ? p : PERSONAJES[0]; }
+function pintarPrincipal(){
+  const p = pjMain(), tag = $('logoTag');
+  if (tag) tag.textContent = p.id === 'jorge' ? '📸 ¿QUIÉN CAZA LA MEJOR FOTO?' : '📸 ¿QUIÉN CAZA LA MEJOR FOTO DE ' + p.n.toUpperCase() + '?';
+  homePose = 0; homeJorge();
+}
 function quitarPj(id){
+  if (LS.get('pjMain', '') === id){ LS.set('pjMain', ''); setTimeout(pintarPrincipal, 0); }
   LS.set('pjs', misPj().filter(x => x.id !== id));
   const p = PERSONAJES.find(x => x.id === id); if (p) delete p.code;
 }
@@ -496,6 +504,7 @@ async function cargarMisPj(){
   const vale = r.pjs.map(x => x.code);
   LS.set('pjs', mis.filter(x => vale.indexOf(x.code) >= 0));   // los borrados por el admin desaparecen
   r.pjs.forEach(x => addPj(x.pj, x.code));
+  pintarPrincipal();
   if (ST && ST.fase === 'lobby') screenLobby();
 }
 const pjArgs = id => { const p = PERSONAJES.find(x => x.id === id); return { pj: id, pjCode: p && p.code || '' }; };
@@ -1012,6 +1021,7 @@ async function crear(){
   if (!r.ok){ toast(r.error, 'err'); return; }
   ME = { code: r.st.code, tok: r.tok }; LS.set('me', ME);
   onState(r.st); poll();
+  const pm = pjMain(); if (pm.extra && pm.code) accion('cfg', Object.assign({ rondas: ST.cfg.rondas, dur: ST.cfg.dur }, pjArgs(pm.id)));
 }
 async function unir(code){
   initAudio(); SFX.click();
@@ -1073,8 +1083,17 @@ function editarPj(id){
   const p = PERSONAJES.find(x => x.id === id); if (!p) return;
   SFX.click();
   const m = modal(`<div style="text-align:center"><img src="${p.icon}" style="height:110px;object-fit:contain" alt=""><h3>${esc(p.n)}</h3><p class="mSub">Código: <b style="color:var(--yellow);letter-spacing:3px">${esc(p.code || '')}</b></p></div>
+    ${pjMain().id === p.id ? '<button class="btn alt" id="peMain">↩️ VOLVER A JORGE COMO PRINCIPAL</button>' : '<button class="btn y" id="peMain">⭐ PONER COMO PRINCIPAL</button>'}
     <button class="btn" id="peDel" style="background:linear-gradient(180deg,#ff5577,#e0234a);color:#fff">🗑️ ELIMINAR PERSONAJE</button><button class="btn alt" id="peNo">CERRAR</button>`);
   m.querySelector('#peNo').onclick = cerrarModal;
+  m.querySelector('#peMain').onclick = () => {
+    const era = pjMain().id === p.id;
+    LS.set('pjMain', era ? '' : p.id); pintarPrincipal(); cerrarModal();
+    if (era) toast('Jorge vuelve a ser el principal', 'info');
+    else { SFX.ding(); confetti(60); toast('⭐ ' + p.n + ' es ahora tu personaje principal', 'ok'); }
+    const nuevo = era ? 'jorge' : p.id;
+    if (ST && ST.fase === 'lobby'){ if (isHost()) accion('cfg', Object.assign({ rondas: ST.cfg.rondas, dur: ST.cfg.dur }, pjArgs(nuevo))); screenLobby(); }
+  };
   m.querySelector('#peDel').onclick = async () => {
     if (!await confirmar('¿Eliminar a ' + p.n + '?', 'Desaparecerá de este móvil. Para recuperarlo tendrás que volver a meter su código.', 'SÍ, ELIMINAR')) return;
     quitarPj(id); toast('🗑️ ' + p.n + ' eliminado', 'info');
@@ -1231,8 +1250,9 @@ function screenLobby(){
   if ($('lbPlayers').dataset.k !== html){ if (prevCount && act.length > prevCount) SFX.ding(); prevCount = act.length; $('lbPlayers').dataset.k = html; $('lbPlayers').innerHTML = html; }
   const h = isHost();
   // Jorge siempre + los que tengas desbloqueados con código + el del anfitrión + botón ＋
-  const vis = PERSONAJES.filter(p => !p.extra || p.code || p.id === PJ.id);
-  const pjHtml = vis.map(p => `<button class="pjc ${p.id === PJ.id ? 'on' : ''}" data-p="${p.id}"><img src="${p.icon}?v=${VERSION}" alt=""><span>${esc(p.n)}</span>${p.extra && p.code ? `<i class="ed" data-ed="${p.id}">✏️</i>` : ''}</button>`).join('') + '<button class="pjc add" id="pjAdd"><b>＋</b>AÑADIR</button>';
+  const pmId = pjMain().id;
+  const vis = PERSONAJES.filter(p => !p.extra || p.code || p.id === PJ.id).sort((a, b) => (b.id === pmId) - (a.id === pmId));
+  const pjHtml = vis.map(p => `<button class="pjc ${p.id === PJ.id ? 'on' : ''}" data-p="${p.id}"><img src="${p.icon}?v=${VERSION}" alt=""><span>${p.id === pmId && pmId !== 'jorge' ? '⭐ ' : ''}${esc(p.n)}</span>${p.extra && p.code ? `<i class="ed" data-ed="${p.id}">✏️</i>` : ''}</button>`).join('') + '<button class="pjc add" id="pjAdd"><b>＋</b>AÑADIR</button>';
   if ($('cfgP').dataset.k !== pjHtml){
     $('cfgP').dataset.k = pjHtml; $('cfgP').innerHTML = pjHtml;
     $('cfgP').querySelectorAll('[data-p]').forEach(b => b.onclick = e => {
@@ -1702,8 +1722,8 @@ $('bInstall').onclick = async () => {
 // Jorge de la portada cambiando de pose con flashes
 let homePose = 0;
 function homeJorge(){
-  const ps = PERSONAJES[0].poses.filter(p => p.g >= .85 && !p.run && !p.air);
-  const p = ps[homePose++ % ps.length];
+  const pm = pjMain(); let ps = pm.poses.filter(p => p.g >= .85 && !p.run && !p.air); if (!ps.length) ps = pm.poses;
+  const p = ps[homePose++ % ps.length]; if (!p) return;
   $('homeJorge').src = p.f + '?v=' + VERSION;
   const st = $('homeStage'); if (st.offsetParent){ const f = document.createElement('div'); f.className = 'flashHit'; f.style.left = (20 + Math.random() * 60) + '%'; f.style.top = (10 + Math.random() * 50) + '%'; st.appendChild(f); setTimeout(() => f.remove(), 600); if (AC && $('scrHome').classList.contains('on')) noise(.04, .15, 3000); }
 }
