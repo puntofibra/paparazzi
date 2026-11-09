@@ -286,6 +286,15 @@ body.inGame .pTop{padding-right:62px}
 .wpBtn::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:shine 3.2s infinite}
 .wpBtn svg{width:22px;height:22px;flex:none}
 .wpMini{margin-top:10px;font-size:11px;color:var(--mute)}
+.wpStep{display:flex;align-items:center;gap:8px;margin:12px 0 7px;font-size:12px;font-weight:800;color:var(--txt);text-align:left}
+.wpStep i{font-style:normal;flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-family:Bungee;font-size:11px;color:#14051f;background:var(--yellow);box-shadow:0 0 12px rgba(255,214,10,.45)}
+.wpStep.s2 i{background:#3ee07a;box-shadow:0 0 12px rgba(62,224,122,.45)}
+.wpPay{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px 16px;border-radius:18px;font-family:Bungee;font-size:16px;letter-spacing:.5px;color:#fff;text-decoration:none;background:linear-gradient(180deg,#4d8dff,#1f5fe0);box-shadow:0 7px 0 #123c94,0 10px 26px rgba(61,125,255,.4);position:relative;overflow:hidden;transition:transform .08s,box-shadow .08s}
+.wpPay:active{transform:translateY(5px);box-shadow:0 2px 0 #123c94,0 4px 12px rgba(61,125,255,.3)}
+.wpPay::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:shine 3.2s infinite}
+.wpPay svg{width:22px;height:22px;flex:none}
+.wpSafe{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:10.5px;color:var(--mute)}
+.wpSafe b{padding:2px 7px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--txt);font-weight:800;letter-spacing:.3px}
 </style>
 </head>
 <body>
@@ -440,7 +449,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.7';
+const VERSION = '2026-11-09.8';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -1059,8 +1068,12 @@ function anadirPj(){
       <div class="wpT">¿Quieres salir <b>TÚ</b> en el juego?</div>
       <p class="wpD">Te convertimos en personaje de dibujos animados con 10 poses y te damos tu código para jugar con tus amigos.</p>
       <div class="wpPrice"><strong>9,95€</strong><span>pago único</span></div>
-      <a class="wpBtn" id="pcWa" href="https://wa.me/34633200100?text=%C2%A1Hola!%20%F0%9F%91%8B%20Quiero%20mi%20personaje%20personalizado%20para%20PAPARAZZI%20%F0%9F%93%B8%20(9%2C95%E2%82%AC).%20%C2%BFQu%C3%A9%20necesit%C3%A1is%20de%20m%C3%AD%20para%20crearlo%3F" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm5.8 14.13c-.24.68-1.42 1.32-1.96 1.36-.5.05-.97.24-3.27-.68-2.77-1.09-4.52-3.93-4.66-4.11-.13-.18-1.11-1.48-1.11-2.82 0-1.34.7-2 .95-2.27.24-.27.53-.34.71-.34l.51.01c.16.01.38-.06.6.46.24.55.79 1.89.86 2.03.07.14.11.3.02.48-.09.18-.14.3-.27.46-.14.16-.29.35-.41.47-.14.14-.28.29-.12.56.16.27.71 1.17 1.52 1.89 1.05.93 1.93 1.22 2.2 1.36.27.14.43.11.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.6-.14.25.09 1.57.74 1.84.88.27.14.45.2.52.32.07.11.07.66-.17 1.33z"/></svg>SOLICITAR MI PERSONAJE</a>
-      <div class="wpMini">Te respondemos por WhatsApp en el momento</div>
+      <div class="wpStep"><i>1</i>Paga de forma segura con tarjeta, Google Pay o Apple Pay</div>
+      <a class="wpPay" id="pcPay" href="https://mypos.com/@futurmovil/9.95" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg>PAGAR 9,95€</a>
+      <div class="wpSafe">🔒 Pago seguro con <b>myPOS</b><b>VISA</b><b>Mastercard</b><b>G Pay</b></div>
+      <div class="wpStep s2"><i>2</i>Escríbenos y envíanos tu foto: ¡en breve tendrás tu código!</div>
+      <a class="wpBtn" id="pcWa" href="https://wa.me/34633200100?text=%C2%A1Hola!%20%F0%9F%91%8B%20Ya%20he%20pagado%20los%209%2C95%E2%82%AC%20de%20mi%20personaje%20personalizado%20para%20PAPARAZZI%20%F0%9F%93%B8.%20Te%20env%C3%ADo%20mi%20foto%20para%20que%20lo%20cre%C3%A9is%3A" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm5.8 14.13c-.24.68-1.42 1.32-1.96 1.36-.5.05-.97.24-3.27-.68-2.77-1.09-4.52-3.93-4.66-4.11-.13-.18-1.11-1.48-1.11-2.82 0-1.34.7-2 .95-2.27.24-.27.53-.34.71-.34l.51.01c.16.01.38-.06.6.46.24.55.79 1.89.86 2.03.07.14.11.3.02.48-.09.18-.14.3-.27.46-.14.16-.29.35-.41.47-.14.14-.28.29-.12.56.16.27.71 1.17 1.52 1.89 1.05.93 1.93 1.22 2.2 1.36.27.14.43.11.59-.07.16-.18.68-.79.86-1.07.18-.27.36-.23.6-.14.25.09 1.57.74 1.84.88.27.14.45.2.52.32.07.11.07.66-.17 1.33z"/></svg>YA HE PAGADO · ENVIAR FOTO</a>
+      
     </div>
     <button class="btn alt" id="pcNo">CANCELAR</button>`);
   const inp = m.querySelector('#pcIn'); setTimeout(() => inp.focus(), 100);
