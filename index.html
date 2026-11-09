@@ -439,12 +439,12 @@ body.inGame .pTop{padding-right:62px}
 <div class="scr" id="scrHelp"><div class="wrap">
   <div class="h1">CÓMO SE JUEGA</div>
   <div class="card help">
-    <p>📸 Sois <b>paparazzis</b> y vuestro objetivo es cazar <b>la mejor foto de Jorge</b>.</p>
-    <p>🎥 Jorge se pasea por todo el escenario sin parar de cambiar de pose… y de repente aparecen <b>abuelas, niños, palomas y coches</b> que te estropean la foto. Además el enfoque se pierde solo.</p>
-    <p>📱 <b>Mueve el móvil</b> (gíralo a los lados, arriba y abajo) para buscar a Jorge por la escena. <b>Pellizca</b> para zoom, <b>toca a Jorge</b> para enfocar y <b>ajusta la luz</b> con la barra ☀️ de la derecha. Si tu móvil no tiene sensores, pulsa 📱 en el visor para cambiar a 👆 y encuadrar con el dedo.</p>
+    <p>📸 Sois <b>paparazzis</b> y vuestro objetivo es cazar <b>la mejor foto de <span class="pjN">Jorge</span></b>.</p>
+    <p>🎥 <span class="pjN">Jorge</span> se pasea por todo el escenario sin parar de cambiar de pose… y de repente aparecen <b>abuelas, niños, palomas y coches</b> que te estropean la foto. Además el enfoque se pierde solo.</p>
+    <p>📱 <b>Mueve el móvil</b> (gíralo a los lados, arriba y abajo) para buscar a <span class="pjN">Jorge</span> por la escena. <b>Pellizca</b> para zoom, <b>toca a <span class="pjN">Jorge</span></b> para enfocar y <b>ajusta la luz</b> con la barra ☀️ de la derecha. Si tu móvil no tiene sensores, pulsa 📱 en el visor para cambiar a 👆 y encuadrar con el dedo.</p>
     <p>🎯 Tienes <b>3 disparos</b> por ronda. Mantén el pulso al disparar: <b>si mueves el móvil, la foto sale movida</b>.</p>
-    <p>✨ Cuidado con los <b>destellos del sol</b>: reencuadra para que no tapen a Jorge.</p>
-    <p>📰 Cada ronda la revista hace un <b>encargo</b> (por ejemplo, "Jorge de espaldas"). Si lo cumples, <b>+25 puntos</b>.</p>
+    <p>✨ Cuidado con los <b>destellos del sol</b>: reencuadra para que no tapen a <span class="pjN">Jorge</span>.</p>
+    <p>📰 Cada ronda la revista hace un <b>encargo</b> (por ejemplo, "<span class="pjN">Jorge</span> de espaldas"). Si lo cumples, <b>+25 puntos</b>.</p>
     <p>⭐ Después todos votáis las fotos de los demás <b>sin saber de quién son</b>. El <b>fotómetro</b> también puntúa el enfoque y el encuadre.</p>
     <p>🏆 Al final de todas las rondas gana el <b>mejor paparazzi</b>.</p>
   </div>
@@ -458,7 +458,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.9';
+const VERSION = '2026-11-09.10';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -509,6 +509,7 @@ function pintarPrincipal(){
   const p = pjMain(), tag = $('logoTag');
   if (tag) tag.textContent = p.id === 'jorge' ? '📸 ¿QUIÉN CAZA LA MEJOR FOTO?' : '📸 ¿QUIÉN CAZA LA MEJOR FOTO DE ' + p.n.toUpperCase() + '?';
   homePose = 0; homeJorge();
+  document.querySelectorAll('.pjN').forEach(e => e.textContent = p.n);   // instrucciones con el nombre del principal
 }
 function quitarPj(id){
   if (LS.get('pjMain', '') === id){ LS.set('pjMain', ''); setTimeout(pintarPrincipal, 0); }
@@ -565,7 +566,7 @@ const INTRUSOS = [
   { n: 'turista', e: '🤳', cap: 'Un turista se ha metido en medio', h: .6 },
   { n: 'ciclista', e: '🚴', cap: 'El ciclista ha pasado a toda pastilla', h: .55 },
   { n: 'patinete', e: '🛴', cap: 'Un patinete se ha cruzado', h: .45 },
-  { n: 'camarero', e: '🤵', cap: 'El camarero ha tapado a Jorge', h: .6 },
+  { n: 'camarero', e: '🤵', cap: 'El camarero ha tapado a {pj}', h: .6 },
   { n: 'drag', e: '💃', cap: 'La drag queen le ha robado el protagonismo', h: .66 },
   { n: 'paparazzi', e: '📸', cap: 'Otro paparazzi se ha metido en medio', h: .5 },
   { n: 'paraguas', e: '☂️', cap: 'Un paraguas gigante lo ha tapado todo', h: .5 },
@@ -832,7 +833,7 @@ function quality(R, t, cam){
 }
 function caption(s){
   if (s.fv < .15) return '🔍 ¿Dónde está ' + PJ.n + '?';
-  if (s.occ > .45 && s.worst) return s.worst.e + ' ' + s.worst.cap;
+  if (s.occ > .45 && s.worst) return s.worst.e + ' ' + s.worst.cap.replace('{pj}', PJ.n);
   if (s.flash > .5) return '⚡ Quemada por el flash';
   if (s.ee > .55) return '☀️ Foto quemada, ¡qué luz!';
   if (s.ee < -.55) return '🌑 Demasiado oscura';
