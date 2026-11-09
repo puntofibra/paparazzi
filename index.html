@@ -422,7 +422,7 @@ body.inGame .pTop{padding-right:62px}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-09.4';
+const VERSION = '2026-11-09.5';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -638,10 +638,14 @@ function shade(hex, p){ const n = parseInt(hex.slice(1), 16); const f = v => cla
    ========================================================= */
 const PLANS = {};
 function plan(R){
-  const key = R.seed + ':' + R.esc + ':' + R.dur + ':' + R.n;
+  const key = PJ.id + ':' + R.seed + ':' + R.esc + ':' + R.dur + ':' + R.n;
   if (PLANS[key]) return PLANS[key];
   const r = rng(R.seed), dur = R.dur, diff = 1 + (R.n - 1) * .12;
-  const enc = ENCARGOS[R.seed % ENCARGOS.length];
+  // solo encargos que este personaje puede cumplir (p. ej. "besando su cruz" solo si tiene esa pose)
+  const ps0 = PJ.poses, tiene = t => ps0.some(p => p.k === t || (p.tag || []).includes(t));
+  const need0 = { portada: 'sonrie', cotilleo: 'drama', espalda: 'espalda', accion: 'accion', perfil: 'perfil', cruz: 'cruz', gafas: 'gafas' };
+  const encs = ENCARGOS.filter(e => !need0[e.k] || tiene(need0[e.k]));
+  const enc = encs[R.seed % encs.length];
   const poses = PJ.poses;
   // poses que necesita el encargo, para asegurar que salgan
   const need = poses.filter(p => (enc.k === 'portada' && p.tag.includes('sonrie')) || (enc.k === 'cotilleo' && p.tag.includes('drama')) || (enc.k === 'espalda' && p.k === 'espalda') ||
