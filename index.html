@@ -106,7 +106,7 @@ input{font-family:inherit}
 .vfo .focus.ok{border-color:var(--green);transform:scale(.85)}
 .vfo .focus.tap{animation:fTap .35s ease-out}
 @keyframes fTap{from{transform:scale(1.8);opacity:.3}}
-.vfo .warn{position:absolute;left:0;right:0;top:44px;text-align:center;font:900 13px Rubik;letter-spacing:1px;color:#ffd60a;text-shadow:0 1px 4px #000,0 0 12px rgba(0,0,0,.8);animation:blink 1s infinite}
+.vfo .warn{position:absolute;left:0;right:0;top:calc(46px + 19%);text-align:center;font:900 13px Rubik;letter-spacing:1px;color:#ffd60a;text-shadow:0 1px 4px #000,0 0 12px rgba(0,0,0,.8);animation:blink 1s infinite}
 #expo{position:absolute;right:8px;top:18%;height:58%;width:44px;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:2;touch-action:none}
 #expo b{font-size:18px;filter:drop-shadow(0 1px 2px #000)}
 #expo .tr{flex:1;width:8px;border-radius:9px;background:linear-gradient(180deg,#fff6b0,#ffb300 50%,#1b1240);position:relative;box-shadow:0 0 0 2px rgba(0,0,0,.5)}
@@ -118,6 +118,29 @@ input{font-family:inherit}
 @keyframes blink{50%{opacity:.2}}
 .vfo .info{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font:800 11px Rubik;letter-spacing:1px;opacity:.85;text-shadow:0 1px 3px #000;white-space:nowrap}
 #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.gRow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:16px;background:rgba(0,0,0,.3);border:2px solid var(--pc);margin-bottom:8px}
+.gRow b{width:78px;flex:none;color:var(--pc);font-weight:900;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gRow b small{display:block;color:var(--mute);font-size:10px;font-weight:700}
+.gthumbs{display:flex;gap:8px;flex-wrap:wrap}
+.gRow .gthumbs{flex:1;flex-wrap:nowrap;overflow-x:auto}
+.gthumbs canvas{width:64px;height:auto;aspect-ratio:3/4;border:3px solid #fffdf7;border-radius:3px;background:#111;cursor:pointer;flex:none;box-shadow:0 4px 10px rgba(0,0,0,.5)}
+.gthumbs canvas.pk{border-color:var(--yellow)}
+#fnMine{justify-content:center}
+#fnMine canvas{width:84px}
+#lb{position:fixed;inset:0;z-index:80;background:rgba(5,2,10,.94);display:none;flex-direction:column;padding:max(10px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom))}
+#lb.on{display:flex}
+.lbTop{display:flex;align-items:center;justify-content:space-between;font-weight:900;font-size:16px;padding:4px 4px 10px}
+.lbTop button{font-size:26px;width:44px;height:44px}
+.lbStage{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:0}
+.lbStage>button{font-size:44px;width:40px;height:80px;flex:none;color:#fff;opacity:.8}
+#lbPol{max-width:min(100%,560px);flex:1;padding:8px 8px 0}
+#lbPol canvas{width:100%;max-height:68vh;object-fit:contain}
+.lbBot{display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:10px}
+.lbBot span{color:var(--mute);font-size:13px;font-weight:700}
+.lbBot .btn{margin:0;max-width:340px}
+#mini{position:absolute;top:46px;left:16px;width:28%;aspect-ratio:16/9;border:1.5px solid rgba(255,255,255,.55);border-radius:4px;background:rgba(0,0,0,.25);pointer-events:none;z-index:1}
+#mini i{position:absolute;border:2px solid var(--yellow);border-radius:2px;background:rgba(255,214,10,.15)}
+#movBtn{position:absolute;left:10px;bottom:40px;z-index:2;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.6);font-size:20px;touch-action:none}
 #flash.go{animation:flashA .45s ease-out}
 @keyframes flashA{0%{opacity:1}100%{opacity:0}}
 #count{position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(7,2,12,.55);backdrop-filter:blur(3px);font-family:Bungee;text-align:center}
@@ -266,6 +289,8 @@ input{font-family:inherit}
   <div id="vfWrap"><canvas id="vf"></canvas>
     <div class="vfo"><div class="grid"></div><div class="br a"></div><div class="br b"></div><div class="br c"></div><div class="br d"></div><div class="focus" id="focusBox"></div><div class="warn" id="vfWarn"></div>
       <div class="rec"><i></i>REC · <span id="plScene"></span></div><div class="info" id="vfInfo">ISO 800 · f/1.8 · 1/250</div></div>
+    <div id="mini"><i id="miniFr"></i></div>
+    <button id="movBtn" aria-label="Cambiar entre sensores y dedo">📱</button>
     <div id="expo"><b>☀️</b><div class="tr"><i id="expoThumb"></i></div><b>🌑</b><span id="expoVal">+0.0 EV</span></div>
     <div id="flash"></div>
     <div id="count"><b id="cntN">3</b><span id="cntTxt"></span></div>
@@ -304,7 +329,11 @@ input{font-family:inherit}
   <div class="h1" id="rsTitle">RESULTADOS</div>
   <div class="resList" id="rsList"></div>
   <div class="card"><div class="lbl" style="margin-bottom:10px">🏆 CLASIFICACIÓN</div><div class="board" id="rsBoard"></div></div>
+  <div class="lbl">📷 LAS FOTOS DE CADA UNO <small style="opacity:.7">(toca para ampliar)</small></div>
+  <div id="rsGal"></div>
+  <button class="btn y" id="bReady">✅ CONTINUAR</button>
   <p class="sub" id="rsNext"></p>
+  <button class="btn alt" id="bForce" style="display:none">⏩ SEGUIR SIN ESPERAR</button>
 </div></div>
 
 <!-- FINAL -->
@@ -313,20 +342,29 @@ input{font-family:inherit}
   <div class="podium" id="fnPod"></div>
   <div class="lbl">📒 ÁLBUM DE LA PARTIDA</div>
   <div class="album" id="fnAlbum"></div>
-  <button class="btn c" id="bSaveBest">💾 GUARDAR MI MEJOR FOTO</button>
+  <div class="lbl">📷 MIS FOTOS DE LA PARTIDA <small style="opacity:.7">(toca para ampliar)</small></div>
+  <div class="gthumbs" id="fnMine"></div>
+  <button class="btn c" id="bSaveAll">💾 GUARDAR TODAS MIS FOTOS</button>
+  <button class="btn alt" id="bSaveBest">⭐ GUARDAR SOLO MI MEJOR FOTO</button>
   <button class="btn y" id="bAgain">🔄 OTRA PARTIDA</button>
   <button class="btn alt" id="bToLobby">👥 VOLVER A LA SALA</button>
   <p class="sub" id="fnWait"></p>
   <button class="btn alt" id="bExit">🏠 SALIR</button>
 </div></div>
 
+<!-- VISOR DE FOTOS EN GRANDE -->
+<div id="lb"><div class="lbTop"><span id="lbTit"></span><button id="lbX" aria-label="Cerrar">✕</button></div>
+  <div class="lbStage"><button id="lbPrev" aria-label="Anterior">‹</button><div class="pol" id="lbPol"><canvas></canvas><div class="cap" id="lbCap"></div></div><button id="lbNext" aria-label="Siguiente">›</button></div>
+  <div class="lbBot"><span id="lbN"></span><button class="btn c" id="lbSave">💾 GUARDAR ESTA FOTO</button></div></div>
+
 <!-- AYUDA -->
 <div class="scr" id="scrHelp"><div class="wrap">
   <div class="h1">CÓMO SE JUEGA</div>
   <div class="card help">
     <p>📸 Sois <b>paparazzis</b> y vuestro objetivo es cazar <b>la mejor foto de Jorge</b>.</p>
-    <p>🎥 La cámara se mueve, hace zoom y se desenfoca sola. Jorge no para de cambiar de pose… y de repente aparecen <b>abuelas, niños, palomas y coches</b> que te estropean la foto.</p>
-    <p>🎯 Tienes <b>3 disparos</b> por ronda. Tú controlas la cámara: <b>arrastra</b> para encuadrar, <b>pellizca</b> para zoom, <b>toca a Jorge</b> para enfocar y <b>ajusta la luz</b> con la barra ☀️ de la derecha.</p>
+    <p>🎥 Jorge se pasea por todo el escenario sin parar de cambiar de pose… y de repente aparecen <b>abuelas, niños, palomas y coches</b> que te estropean la foto. Además el enfoque se pierde solo.</p>
+    <p>📱 <b>Mueve el móvil</b> (gíralo a los lados, arriba y abajo) para buscar a Jorge por la escena. <b>Pellizca</b> para zoom, <b>toca a Jorge</b> para enfocar y <b>ajusta la luz</b> con la barra ☀️ de la derecha. Si tu móvil no tiene sensores, pulsa 📱 en el visor para cambiar a 👆 y encuadrar con el dedo.</p>
+    <p>🎯 Tienes <b>3 disparos</b> por ronda. Mantén el pulso al disparar: <b>si mueves el móvil, la foto sale movida</b>.</p>
     <p>✨ Cuidado con los <b>destellos del sol</b>: reencuadra para que no tapen a Jorge.</p>
     <p>📰 Cada ronda la revista hace un <b>encargo</b> (por ejemplo, "Jorge de espaldas"). Si lo cumples, <b>+25 puntos</b>.</p>
     <p>⭐ Después todos votáis las fotos de los demás <b>sin saber de quién son</b>. El <b>fotómetro</b> también puntúa el enfoque y el encuadre.</p>
@@ -342,7 +380,7 @@ input{font-family:inherit}
 /* =========================================================
    PAPARAZZI — un juego de FuturMovil
    ========================================================= */
-const VERSION = '2026-11-08.3';
+const VERSION = '2026-11-09.1';
 const API = 'https://script.google.com/macros/s/AKfycbwphOHWB-AbWHOEvo4IA5VoynsYR4qkvIsi9x_H9YQHzsilTZlzywToyEI4WcAzz1F6/exec';
 const APP_URL = 'https://puntofibra.github.io/paparazzi/';
 const $ = id => document.getElementById(id);
@@ -576,30 +614,28 @@ function sceneAt(R, t, cam){
   const sg = P.seg.find(s => t >= s.a && t < s.b) || P.seg[P.seg.length - 1];
   const pose = sg.p, im = poseImg(pose);
   // Jorge
-  let jx = WW / 2 + 360 * Math.sin(t * .35 * f[0] + ph[0]) + 120 * Math.sin(t * .9 * f[1] + ph[1]);
-  if (pose.run) jx += (t - sg.a) * 260 * (Math.sin(ph[2]) > 0 ? 1 : -1);
-  jx = clamp(jx, 260, WW - 260);
+  // Jorge pasea despacio por todo el escenario (hay que buscarlo moviendo el móvil)
+  let jx = WW / 2 + 440 * Math.sin(t * .11 * f[0] * d + ph[0]) + 90 * Math.sin(t * .33 * f[1] + ph[1]);
+  if (pose.run) jx += (t - sg.a) * 110 * (Math.sin(ph[2]) > 0 ? 1 : -1);
+  jx = clamp(jx, 230, WW - 230);
   const baseH = 600 * (pose.h || 1);
   const iw = im ? im.width : 520, ih = im ? im.height : 1380;
   const jh = baseH, jw = jh * iw / ih;
   let jy = GROUND - jh;
   if (pose.air){ const u = (t - sg.a) / (sg.b - sg.a); jy -= Math.sin(u * Math.PI) * 120; }
   const J = { x: jx - jw / 2, y: jy, w: jw, h: jh };
-  // cámara: zoom, paneo con retraso, golpes de paneo, temblor
-  let z = 1.45 + .65 * Math.sin(t * .55 * f[2] * d + ph[3]) + .25 * Math.sin(t * 1.7 * f[3] + ph[4]);
-  z = clamp(z * (cam ? cam.zm : 1), .9, 3.2);
-  let cx = jx + 150 * Math.sin(t * .8 * f[4] * d + ph[5]) + 75 * Math.sin(t * 2.1 * f[5] + ph[6]) + 280 * Math.sin(t * .23 * d + ph[1] * 2);
-  let cy = GROUND - 330 + 110 * Math.sin(t * .7 * f[6] + ph[7]);
+  // cámara: la mueve el fotógrafo (sensores del móvil o dedo) y el zoom va con pellizco
+  const abs = !!(cam && cam.ax != null);
+  const z = abs ? clamp(cam.zm || 1.3, 1, 3.2) : 1.3;
+  let cx = abs ? cam.ax : WW / 2, cy = abs ? cam.ay : GROUND - 330;
   let blur = 0, flash = 0;
   P.ev.forEach(e => {
     if (t < e.a || t > e.a + e.d) return;
     const u = (t - e.a) / e.d, pulse = Math.sin(u * Math.PI);
     if (e.k === 'blur') blur = Math.max(blur, e.s * pulse);
-    else if (e.k === 'whip'){ cx += e.dx * pulse; cy += e.dy * pulse; blur = Math.max(blur, 3.5 * pulse); }
     else if (e.k === 'flash') flash = Math.max(flash, 1 - u);
   });
-  const sh = 6 * d; cx += Math.sin(t * 23) * sh; cy += Math.cos(t * 19) * sh;
-  if (cam){ cx += cam.dx; cy += cam.dy; }
+  const sh = 2.5 * d; cx += Math.sin(t * 23) * sh; cy += Math.cos(t * 19) * sh;   // pulso del fotógrafo
   // enfoque y exposición que controla el fotógrafo
   const fe = cam ? Math.abs(P.fd(t) - cam.pf) : 0, ee = cam ? P.ex(t) + cam.pe : 0;
   blur += clamp(fe * 11 - .4, 0, 9);
@@ -607,6 +643,9 @@ function sceneAt(R, t, cam){
   const vh = WH / z, vw = vh * .75;
   cx = clamp(cx, vw / 2, WW - vw / 2); cy = clamp(cy, vh / 2, WH - vh / 2);
   const V = { x: cx - vw / 2, y: cy - vh / 2, w: vw, h: vh };
+  // foto movida: estela según lo rápido que se movía la cámara al disparar
+  const M = { x: abs ? Number(cam.mx) || 0 : 0, y: abs ? Number(cam.my) || 0 : 0 };
+  const dblur = blur; blur += clamp(Math.hypot(M.x, M.y) / vw * 55, 0, 9);
   // intrusos
   const I = [];
   P.intr.forEach(o => {
@@ -619,7 +658,7 @@ function sceneAt(R, t, cam){
     const y = I0.air ? 120 + o.yo * 260 + Math.sin(t * 6 + o.ph) * 30 : WH + 30 - h + Math.abs(Math.sin(t * 9 + o.ph)) * -14;
     I.push({ I: I0, x, y, w, h, dir: o.dir, img });
   });
-  return { t, pose, J, V, z, blur, flash, I, esc: R.esc, fe, ee, G };
+  return { t, pose, J, V, z, blur, dblur, M, flash, I, esc: R.esc, fe, ee, G };
 }
 const inter = (a, b) => { const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y); return w > 0 && h > 0 ? w * h : 0; };
 // fotómetro: puntúa la foto de 0 a 100
@@ -665,7 +704,14 @@ function caption(s){
 }
 
 /* ---------- dibujar un fotograma ---------- */
-const blurCv = document.createElement('canvas'), blurCx = blurCv.getContext('2d');
+const sharpCv = document.createElement('canvas'), sharpCx = sharpCv.getContext('2d');
+const tmpCv = document.createElement('canvas'), tmpCx = tmpCv.getContext('2d');
+let CANFILTER = null;
+function canFilter(){
+  if (CANFILTER !== null) return CANFILTER;
+  try{ const c = document.createElement('canvas'); c.width = c.height = 9; const x = c.getContext('2d'); x.filter = 'blur(2px)'; x.fillStyle = '#fff'; x.fillRect(4, 4, 1, 1); CANFILTER = x.getImageData(2, 4, 1, 1).data[3] > 0; }catch(e){ CANFILTER = false; }
+  return CANFILTER;
+}
 function drawScene(x, w, h, S){
   const V = S.V, k = w / V.w;
   x.save();
@@ -712,14 +758,36 @@ function drawScene(x, w, h, S){
 }
 function renderFrame(cv, R, t, cam){
   const x = cv.getContext('2d'), w = cv.width, h = cv.height;
-  const S = sceneAt(R, t, cam);
-  if (S.blur > .6){
-    const f = 1 / (1 + S.blur * .55);
-    blurCv.width = Math.max(8, Math.round(w * f)); blurCv.height = Math.max(8, Math.round(h * f));
-    drawScene(blurCx, blurCv.width, blurCv.height, S);
-    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
-    x.drawImage(blurCv, 0, 0, w, h);
-  } else drawScene(x, w, h, S);
+  const S = sceneAt(R, t, cam), k = w / S.V.w;
+  const rd = S.dblur * w / 360 * 1.1;                 // desenfoque (px)
+  const mx = S.M.x * k, my = S.M.y * k, ml = Math.hypot(mx, my);   // estela de foto movida (px)
+  if (rd < .7 && ml < 1.5){ drawScene(x, w, h, S); return S; }
+  // con mucho desenfoque se trabaja a media resolución (no se nota y va más fluido)
+  const sc = (rd + ml > 10 && w > 400) ? .5 : 1;
+  const ww = Math.round(w * sc), hh = Math.round(h * sc);
+  const m = Math.ceil((rd * 2 + ml / 2) * sc) + 2;    // margen extra para que no se vean bordes negros
+  const kk = ww / S.V.w, mw = m / kk;
+  sharpCv.width = ww + 2 * m; sharpCv.height = hh + 2 * m;
+  drawScene(sharpCx, sharpCv.width, sharpCv.height, Object.assign({}, S, { V: { x: S.V.x - mw, y: S.V.y - mw, w: S.V.w + 2 * mw, h: S.V.h + 2 * mw } }));
+  let src = sharpCv;
+  if (rd >= .7){
+    tmpCv.width = sharpCv.width; tmpCv.height = sharpCv.height;
+    const r = rd * sc;
+    if (canFilter()){ tmpCx.filter = 'blur(' + (r * .6).toFixed(1) + 'px)'; tmpCx.drawImage(sharpCv, 0, 0); tmpCx.filter = 'none'; }
+    else {
+      const n = r < 3 ? 6 : 12; tmpCx.globalAlpha = 1; tmpCx.drawImage(sharpCv, 0, 0);
+      for (let i = 0; i < n; i++){ const a = i / n * 6.283 + (i % 2) * .4, rr = i % 2 ? r : r * .5; tmpCx.globalAlpha = 1 / (i + 2); tmpCx.drawImage(sharpCv, Math.cos(a) * rr, Math.sin(a) * rr); }
+      tmpCx.globalAlpha = 1;
+    }
+    src = tmpCv;
+  }
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  const ox = -m / sc, oy = -m / sc, dw = src.width / sc, dh = src.height / sc;
+  if (ml >= 1.5){
+    const n = clamp(Math.round(ml * sc / 1.5), 4, 18);
+    for (let i = 0; i < n; i++){ const u = i / (n - 1) - .5; x.globalAlpha = 1 / (i + 1); x.drawImage(src, ox + u * mx, oy + u * my, dw, dh); }
+    x.globalAlpha = 1;
+  } else x.drawImage(src, ox, oy, dw, dh);
   return S;
 }
 // foto en un canvas nuevo (para polaroids)
@@ -791,7 +859,7 @@ function toast(txt, type, ms){
   const el = document.createElement('div'); el.className = 'toast'; el.style.setProperty('--tc', c); el.innerHTML = '<i>' + ic + '</i><span>' + esc(txt) + '</span>';
   $('toasts').appendChild(el); setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, ms || 3200);
 }
-function show(id){ document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); $('bMute').style.display = ['scrPlay', 'scrVote', 'scrPick'].includes(id) ? 'none' : ''; }
+function show(id){ const lb = document.getElementById('lb'); if (lb && id !== 'scrRes' && id !== 'scrFinal') lb.classList.remove('on'); document.querySelectorAll('.scr').forEach(s => s.classList.toggle('on', s.id === id)); $('bMute').style.display = ['scrPlay', 'scrVote', 'scrPick'].includes(id) ? 'none' : ''; }
 
 /* ---------- confeti ---------- */
 const fx = $('fxCv'), fxx = fx.getContext('2d'); let parts = [];
@@ -949,7 +1017,7 @@ function screenCapture(prev){
     $('plRound').textContent = ST.ronda + '/' + ST.cfg.rondas;
     $('plEnc').querySelector('span').textContent = encTxt(plan(capR).enc);
     $('plScene').textContent = ESCENAS[capR.esc % ESCENAS.length].n.toUpperCase();
-    $('cntTxt').innerHTML = '📰 ' + esc(encTxt(plan(capR).enc)) + '<small>👆 Arrastra para encuadrar · 🤏 pellizca para zoom<br>🎯 Toca a ' + esc(PJ.n) + ' para enfocar · ☀️ Ajusta la luz a la derecha<br>✨ ¡Evita los destellos del sol!</small>';
+    $('cntTxt').innerHTML = '📰 ' + esc(encTxt(plan(capR).enc)) + '<small>📱 Mueve el móvil para buscar a ' + esc(PJ.n) + ' · 🤏 pellizca para zoom<br>🎯 Toca a ' + esc(PJ.n) + ' para enfocar · ☀️ Ajusta la luz a la derecha<br>🫨 Si mueves el móvil al disparar, ¡sale movida!</small>';
     lastScreen = '';
   }
   const t = now();
@@ -973,9 +1041,10 @@ function startCapture(){
     if (el < 0){
       cnt.style.display = 'flex'; const n = Math.ceil(-el); $('cntN').textContent = n;
       if (n !== lastTick){ lastTick = n; if (n <= 3) SFX.tick(); }
-      renderFrame($('vf'), capR, 0, CAM); $('shutter').disabled = true; return;
+      capOn = false; camReset(); renderFrame($('vf'), capR, 0, CAM); $('shutter').disabled = true; return;
     }
-    if (cnt.style.display !== 'none'){ cnt.style.display = 'none'; SFX.go(); $('shutter').disabled = false; }
+    if (cnt.style.display !== 'none'){ cnt.style.display = 'none'; SFX.go(); $('shutter').disabled = false; capOn = true; GY.t = 0; }
+    if (GY.mode === 'gyro' && !GY.ok && el > 1.5 && !GY.warned){ GY.warned = true; toast('📱 No llegan datos de los sensores: arrastra con el dedo para encuadrar', 'info', 3500); }
     const tt = Math.min(el, dur);
     camStep(); const S = renderFrame($('vf'), capR, tt, CAM); lastS = S;
     const left = Math.max(0, dur - el);
@@ -983,14 +1052,15 @@ function startCapture(){
     $('tmArc').style.strokeDashoffset = 138.2 * (1 - left / dur);
     $('tmArc').style.stroke = left < 4 ? '#ff5252' : '#ffd60a';
     if (left < 4 && Math.ceil(left) !== lastTick){ lastTick = Math.ceil(left); SFX.tick(); }
-    $('focusBox').classList.toggle('ok', S.fe < .08); $('vfWarn').textContent = S.G.some(g => g.s > .35) ? '✨ ¡DESTELLO! REENCUADRA' : S.ee > .45 ? '☀️ DEMASIADA LUZ · BAJA LA EXPOSICIÓN' : S.ee < -.45 ? '🌑 FALTA LUZ · SUBE LA EXPOSICIÓN' : S.fe > .15 ? '🎯 TOCA A ' + PJ.n.toUpperCase() + ' PARA ENFOCAR' : '';
+    const lost = inter(S.J, S.V) < S.J.w * S.J.h * .08;
+    $('focusBox').classList.toggle('ok', S.fe < .08); $('vfWarn').textContent = lost ? '🔍 ¿DÓNDE ESTÁ ' + PJ.n.toUpperCase() + '? ' + (gyroActive() ? 'MUEVE EL MÓVIL' : 'ARRASTRA') : S.G.some(g => g.s > .35) ? '✨ ¡DESTELLO! REENCUADRA' : S.ee > .45 ? '☀️ DEMASIADA LUZ · BAJA LA EXPOSICIÓN' : S.ee < -.45 ? '🌑 FALTA LUZ · SUBE LA EXPOSICIÓN' : S.fe > .15 ? '🎯 TOCA A ' + PJ.n.toUpperCase() + ' PARA ENFOCAR' : '';
     $('vfInfo').textContent = 'ISO ' + (400 + Math.round(S.z * 300)) + ' · ' + S.z.toFixed(1) + 'x · ' + (S.fe < .08 ? 'ENFOCADO ✓' : 'DESENFOCADO');
     if (S.I.length){ S.I.forEach(o => { if (!o.I._last || t - o.I._last > 1500){ o.I._last = t; if (o.I.n === 'coche') SFX.honk(); else if (o.I.air) SFX.wind(); } }); }
     if (el >= dur){ stopCapture(); $('shutter').disabled = true; setTimeout(() => { if (ST && ST.fase === 'captura' && capRound === ST.ronda) openPick(); }, 500); }
   };
   loop();
 }
-function stopCapture(){ cancelAnimationFrame(capRAF); capRAF = 0; }
+function stopCapture(){ cancelAnimationFrame(capRAF); capRAF = 0; capOn = false; }
 function shoot(){
   if (!ST || ST.fase !== 'captura' || myShots.length >= 3) return;
   const el = (now() - ST.t0) / 1000; if (el < 0 || el > ST.cfg.dur) return;
@@ -1007,33 +1077,87 @@ function shoot(){
 $('shutter').addEventListener('pointerdown', e => { e.preventDefault(); shoot(); });
 
 /* ---------- controles táctiles de la cámara ---------- */
-let CAM = { dx: 0, dy: 0, zm: 1, pf: .5, pe: 0 }, pfTarget = .5, lastS = null;
-function camReset(){ CAM = { dx: 0, dy: 0, zm: 1, pf: .2, pe: 0 }; pfTarget = .2; paintExpo(); }
-const camCopy = () => ({ dx: Math.round(CAM.dx), dy: Math.round(CAM.dy), zm: Math.round(CAM.zm * 100) / 100, pf: Math.round(CAM.pf * 1000) / 1000, pe: Math.round(CAM.pe * 100) / 100 });
-function camStep(){ CAM.pf += (pfTarget - CAM.pf) * .25; }
+const CAM0 = () => ({ ax: WW / 2, ay: 520, zm: 1.3, pf: .2, pe: 0, mx: 0, my: 0 });
+let CAM = CAM0(), pfTarget = .2, lastS = null, capOn = false;
+const CAMV = { px: 0, py: 0, vx: 0, vy: 0, t: 0 };
+function camReset(){ CAM = CAM0(); pfTarget = .2; CAMV.t = 0; CAMV.vx = CAMV.vy = 0; paintExpo(); paintMini(); }
+const camCopy = () => ({ ax: Math.round(CAM.ax), ay: Math.round(CAM.ay), zm: Math.round(CAM.zm * 100) / 100, pf: Math.round(CAM.pf * 1000) / 1000, pe: Math.round(CAM.pe * 100) / 100, mx: Math.round(CAM.mx), my: Math.round(CAM.my) });
+function camClamp(){ const vh = WH / CAM.zm, vw = vh * .75; CAM.ax = clamp(CAM.ax, vw / 2, WW - vw / 2); CAM.ay = clamp(CAM.ay, vh / 2, WH - vh / 2); }
+function camStep(){
+  CAM.pf += (pfTarget - CAM.pf) * .25;
+  camClamp();
+  // velocidad de la cámara → estela de foto movida
+  const tn = performance.now(), dt = CAMV.t ? clamp((tn - CAMV.t) / 1000, .005, .1) : 0;
+  if (dt){ CAMV.vx += ((CAM.ax - CAMV.px) / dt - CAMV.vx) * .45; CAMV.vy += ((CAM.ay - CAMV.py) / dt - CAMV.vy) * .45; }
+  CAMV.px = CAM.ax; CAMV.py = CAM.ay; CAMV.t = tn;
+  CAM.mx = clamp(CAMV.vx * .055, -150, 150); CAM.my = clamp(CAMV.vy * .055, -150, 150);
+  if (Math.abs(CAM.mx) < 1.5) CAM.mx = 0; if (Math.abs(CAM.my) < 1.5) CAM.my = 0;
+  paintMini();
+}
+function paintMini(){
+  const f = $('miniFr'); if (!f) return;
+  const vh = WH / CAM.zm, vw = vh * .75;
+  f.style.left = ((CAM.ax - vw / 2) / WW * 100) + '%'; f.style.width = (vw / WW * 100) + '%';
+  f.style.top = ((CAM.ay - vh / 2) / WH * 100) + '%'; f.style.height = (vh / WH * 100) + '%';
+}
+/* ---------- sensores del móvil: giroscopio para mover la cámara ---------- */
+const GY = { ok: false, asked: false, up: [0, 1, 0], t: 0, mode: LS.get('mov', 'gyro'), warned: false };
+const gyroActive = () => GY.mode === 'gyro' && GY.ok;
+function gyroAsk(){
+  if (GY.asked) return; GY.asked = true;
+  try{
+    if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function')   // iPhone: hay que pedir permiso
+      DeviceMotionEvent.requestPermission().then(r => { if (r !== 'granted') GY.denied = true; }).catch(() => { GY.asked = false; });
+  }catch(e){}
+}
+addEventListener('click', gyroAsk, true); addEventListener('touchend', gyroAsk, true);
+addEventListener('devicemotion', e => {
+  const r = e.rotationRate, g = e.accelerationIncludingGravity;
+  if (!r || r.alpha == null || r.beta == null || r.gamma == null) return;
+  if (!GY.ok && (r.alpha || r.beta || r.gamma)) GY.ok = true;
+  if (g && g.x != null){ const u = GY.up; u[0] += (g.x - u[0]) * .08; u[1] += (g.y - u[1]) * .08; u[2] += (g.z - u[2]) * .08; }
+  const tn = performance.now(), dt = GY.t ? Math.min(.1, (tn - GY.t) / 1000) : 0; GY.t = tn;
+  if (!dt || !capOn || !gyroActive()) return;
+  let [ux, uy, uz] = GY.up; const L = Math.hypot(ux, uy, uz) || 1; ux /= L; uy /= L; uz /= L;
+  if (uy + uz < 0){ ux = -ux; uy = -uy; uz = -uz; }   // algunos móviles dan la gravedad con el signo al revés
+  let yaw = r.beta * ux + r.gamma * uy + r.alpha * uz;   // girar a izquierda/derecha (°/s)
+  let pitch = r.beta;                                      // inclinar arriba/abajo (°/s)
+  if (Math.abs(yaw) < .6) yaw = 0; if (Math.abs(pitch) < .6) pitch = 0;
+  const K = 15;   // unidades del escenario por grado girado
+  CAM.ax -= yaw * dt * K; CAM.ay -= pitch * dt * K;
+  camClamp();
+});
+function paintMov(){ const b = $('movBtn'); if (b) b.textContent = GY.mode === 'gyro' ? '📱' : '👆'; }
+$('movBtn').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation(); gyroAsk();
+  GY.mode = GY.mode === 'gyro' ? 'dedo' : 'gyro'; LS.set('mov', GY.mode); paintMov(); SFX.click();
+  toast(GY.mode === 'gyro' ? (GY.ok ? '📱 Mueve el móvil para buscar a ' + PJ.n : '📱 Tu móvil no envía datos de los sensores; de momento usa el dedo') : '👆 Arrastra con el dedo para encuadrar', 'info', 2500);
+});
+paintMov();
 const ptrs = new Map(); let gest = null;
 function vfLocal(e){ const r = $('vfWrap').getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height }; }
 $('vfWrap').addEventListener('pointerdown', e => {
-  if (e.target.closest('#expo')) return;
+  if (e.target.closest('#expo') || e.target.closest('#movBtn')) return;
   e.preventDefault(); $('vfWrap').setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, vfLocal(e));
-  if (ptrs.size === 1){ const p = vfLocal(e); gest = { x0: p.x, y0: p.y, t0: performance.now(), moved: false, dx: CAM.dx, dy: CAM.dy }; }
+  if (ptrs.size === 1){ const p = vfLocal(e); gest = { x0: p.x, y0: p.y, t0: performance.now(), moved: false, ax: CAM.ax, ay: CAM.ay }; }
   else if (ptrs.size === 2){ const [a, b] = [...ptrs.values()]; gest = { pinch: Math.hypot(a.x - b.x, a.y - b.y), zm: CAM.zm, moved: true }; }
 });
 $('vfWrap').addEventListener('pointermove', e => {
   if (!ptrs.has(e.pointerId) || !gest) return;
   const p = vfLocal(e); ptrs.set(e.pointerId, p);
-  if (gest.pinch && ptrs.size >= 2){ const [a, b] = [...ptrs.values()]; CAM.zm = clamp(gest.zm * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(20, gest.pinch), .6, 2); return; }
+  if (gest.pinch && ptrs.size >= 2){ const [a, b] = [...ptrs.values()]; CAM.zm = clamp(gest.zm * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(20, gest.pinch), 1, 3.2); camClamp(); return; }
   const ddx = p.x - gest.x0, ddy = p.y - gest.y0;
   if (Math.hypot(ddx, ddy) > 8) gest.moved = true;
-  if (gest.moved && lastS){ const k = lastS.V.w / p.w; CAM.dx = clamp(gest.dx - ddx * k, -700, 700); CAM.dy = clamp(gest.dy - ddy * k, -300, 300); }
+  // con sensores, el dedo solo sirve para enfocar (toque) y para el zoom (pellizco)
+  if (gest.moved && lastS && !gyroActive()){ const k = lastS.V.w / p.w; CAM.ax = gest.ax - ddx * k; CAM.ay = gest.ay - ddy * k; camClamp(); }
 });
 function ptrUp(e){
   if (!ptrs.has(e.pointerId)) return;
   const p = vfLocal(e); ptrs.delete(e.pointerId);
   if (gest && !gest.moved && !gest.pinch && performance.now() - gest.t0 < 400) tapFocus(p);
   if (!ptrs.size) gest = null;
-  else if (gest && gest.pinch){ const q = [...ptrs.values()][0]; gest = { x0: q.x, y0: q.y, t0: 0, moved: true, dx: CAM.dx, dy: CAM.dy }; }
+  else if (gest && gest.pinch){ const q = [...ptrs.values()][0]; gest = { x0: q.x, y0: q.y, t0: 0, moved: true, ax: CAM.ax, ay: CAM.ay }; }
 }
 $('vfWrap').addEventListener('pointerup', ptrUp); $('vfWrap').addEventListener('pointercancel', ptrUp);
 // tocar para enfocar: si tocas a Jorge, enfoca bien; si tocas el fondo, enfoca el fondo
@@ -1086,7 +1210,8 @@ function sendPick(){
   clearInterval(pickT);
   if (sentPhoto) return;
   sentPhoto = 1; SFX.whoosh();
-  if (pickedIdx >= 0){ const s = myShots[pickedIdx]; accion('foto', { ronda: capRound, t: s.t, q: s.q.q, enc: s.q.enc, cam: s.cam }); } else accion('nofoto', { ronda: capRound });
+  const sh = myShots.map(s => ({ t: s.t, q: s.q.q, cam: s.cam }));
+  if (pickedIdx >= 0){ const s = myShots[pickedIdx]; accion('foto', { ronda: capRound, t: s.t, q: s.q.q, enc: s.q.enc, cam: s.cam, sh }); } else accion('nofoto', { ronda: capRound, sh });
   lastScreen = 'waitPhotos'; waitScreen(pickedIdx >= 0 ? '📸 FOTO ENVIADA' : '😅 SIN FOTO', 'Esperando a que el resto elija su foto…');
 }
 $('bPick').onclick = () => { SFX.click(); sendPick(); };
@@ -1156,9 +1281,92 @@ function screenResults(){
   });
   setTimeout(() => { if (lastScreen === 'res' && res[0] && res[0].id === ST.yo) confetti(120); }, order.length * 900 + 200);
   board($('rsBoard'));
+  galeriaRonda(ST.ronda);
+  $('bReady').disabled = false;
+  $('bReady').textContent = ST.ronda >= ST.cfg.rondas ? '🏆 VER LA CLASIFICACIÓN FINAL' : '✅ CONTINUAR A LA RONDA ' + (ST.ronda + 1);
   updNext();
 }
-function updNext(){ const s = Math.max(0, Math.ceil((ST.rEnd - now()) / 1000)); $('rsNext').textContent = ST.ronda >= ST.cfg.rondas ? '🏆 Ahora, ¡la clasificación final!' : '⏭️ Siguiente ronda en ' + s + ' s…'; }
+function updNext(){
+  const act = ST.jug.filter(j => !j.off), L = ST.listo || [], yo = L.indexOf(ST.yo) >= 0;
+  const faltan = act.filter(j => L.indexOf(j.id) < 0);
+  if (yo){ $('bReady').disabled = true; $('bReady').textContent = '⏳ ESPERANDO AL RESTO…'; }
+  $('rsNext').textContent = '✅ Listos ' + act.filter(j => L.indexOf(j.id) >= 0).length + '/' + act.length + (faltan.length ? ' · Faltan: ' + faltan.map(j => j.n).join(', ') : '');
+  $('bForce').style.display = isHost() && yo && faltan.length ? '' : 'none';
+}
+$('bReady').onclick = () => { SFX.click(); $('bReady').disabled = true; accion('listo', { ronda: ST.ronda }); };
+$('bForce').onclick = () => { SFX.click(); accion('forzar', { ronda: ST.ronda }); };
+// fotos de una ronda: { idJugador: [ {t, q, cam}, … ] }
+function fotosRonda(n){
+  const g = (ST.gal && ST.gal[n - 1]) || {}, res = (ST.hist && ST.hist[n - 1]) || [], out = {};
+  Object.keys(g).forEach(id => { if (g[id] && g[id].length) out[id] = g[id]; });
+  res.forEach(x => { if (!out[x.id]) out[x.id] = [{ t: x.t, q: x.q, cam: x.cam }]; });
+  return out;
+}
+function galeriaRonda(n){
+  const G = $('rsGal'); G.innerHTML = '';
+  const R = R_of(n), F = fotosRonda(n), res = (ST.hist && ST.hist[n - 1]) || [];
+  const ids = Object.keys(F).map(Number).sort((a, b) => (a === ST.yo ? -1 : b === ST.yo ? 1 : 0) || res.findIndex(x => x.id === a) - res.findIndex(x => x.id === b));
+  if (!ids.length){ G.innerHTML = '<p class="sub">Nadie hizo fotos esta ronda 🙈</p>'; return; }
+  ids.forEach(id => {
+    const p = player(id), env = res.find(x => x.id === id);
+    const row = document.createElement('div'); row.className = 'gRow'; row.style.setProperty('--pc', p.c);
+    row.innerHTML = `<b>${esc(p.n)}${id === ST.yo ? ' (tú)' : ''}<small>${F[id].length} foto${F[id].length > 1 ? 's' : ''}</small></b><div class="gthumbs"></div>`;
+    const items = F[id].map((f, i) => ({ R, t: f.t, cam: f.cam, tit: '📷 ' + p.n + ' · Ronda ' + n, sel: env && env.t === f.t }));
+    items.forEach((it, i) => { const c = photoCanvas(R, it.t, 150, it.cam); if (it.sel) c.className = 'pk'; c.onclick = () => verFoto(items, i); row.querySelector('.gthumbs').appendChild(c); });
+    G.appendChild(row);
+  });
+}
+/* ---------- visor de fotos en grande ---------- */
+let LB = { items: [], i: 0 };
+function verFoto(items, i){ SFX.click(); LB = { items, i }; $('lb').classList.add('on'); pintaLB(); }
+function pintaLB(){
+  const it = LB.items[LB.i]; if (!it) return;
+  const c = photoCanvas(it.R, it.t, 900, it.cam), q = quality(it.R, it.t / 1000, it.cam);
+  $('lbPol').querySelector('canvas').replaceWith(c);
+  $('lbCap').textContent = q.cap + (it.sel ? '  ⭐ (la que envió)' : '');
+  $('lbTit').textContent = it.tit;
+  $('lbN').textContent = (LB.i + 1) + ' / ' + LB.items.length + ' · 📷 calidad ' + q.q;
+  $('lbPrev').style.visibility = LB.i > 0 ? 'visible' : 'hidden'; $('lbNext').style.visibility = LB.i < LB.items.length - 1 ? 'visible' : 'hidden';
+}
+function lbMove(d){ const j = LB.i + d; if (j < 0 || j >= LB.items.length) return; LB.i = j; SFX.whoosh(); pintaLB(); }
+$('lbX').onclick = () => { SFX.click(); $('lb').classList.remove('on'); };
+$('lbPrev').onclick = () => lbMove(-1); $('lbNext').onclick = () => lbMove(1);
+$('lbSave').onclick = () => { const it = LB.items[LB.i]; if (it) guardarFotos([it]); };
+(() => { let x0 = null; const st = $('lb').querySelector('.lbStage');
+  st.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+  st.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 50) lbMove(dx < 0 ? 1 : -1); });
+})();
+/* ---------- guardar fotos (una o varias) ---------- */
+function polaroid(it){
+  const ph = photoCanvas(it.R, it.t, 900, it.cam), q = quality(it.R, it.t / 1000, it.cam);
+  const c = document.createElement('canvas'); c.width = 1000; c.height = 1420;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fffdf7'; x.fillRect(0, 0, c.width, c.height);
+  x.drawImage(ph, 50, 50, 900, 1200);
+  x.fillStyle = '#222'; x.textAlign = 'center'; x.font = '900 46px Rubik, sans-serif'; x.fillText(q.cap.replace(/[^\p{L}\p{N}\s¡!¿?.,]/gu, '').trim() || 'PAPARAZZI', 500, 1320);
+  x.font = '700 30px Rubik, sans-serif'; x.fillStyle = '#d62976'; x.fillText(it.pie || ('📸 PAPARAZZI · ' + it.tit.replace(/^📷\s*/, '')), 500, 1375);
+  return c;
+}
+async function guardarFotos(items){
+  if (!items.length) return;
+  SFX.click(); if (items.length > 1) toast('📸 Preparando ' + items.length + ' fotos…', 'info', 2000);
+  const files = [];
+  for (let i = 0; i < items.length; i++){
+    const b = await new Promise(r => polaroid(items[i]).toBlob(r, 'image/jpeg', .92));
+    files.push(new File([b], 'paparazzi-' + (items[i].nom || (i + 1)) + '.jpg', { type: 'image/jpeg' }));
+  }
+  if (navigator.canShare && navigator.canShare({ files })){ try{ await navigator.share({ files, title: 'PAPARAZZI' }); return; }catch(e){ if (e && e.name === 'AbortError') return; } }
+  for (const f of files){ const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); await new Promise(r => setTimeout(r, 450)); }
+  toast('💾 ' + (files.length > 1 ? files.length + ' fotos guardadas' : 'Foto guardada'), 'ok');
+}
+function misFotos(){
+  const out = [], me = player(ST.yo);
+  (ST.hist || []).forEach((res, i) => {
+    const n = i + 1, R = R_of(n), F = fotosRonda(n)[ST.yo] || [], env = (res || []).find(x => x.id === ST.yo);
+    F.forEach((f, k) => out.push({ R, t: f.t, cam: f.cam, tit: '📷 ' + me.n + ' · Ronda ' + n, sel: env && env.t === f.t, nom: 'r' + n + '-' + (k + 1) }));
+  });
+  return out;
+}
 function board(el){
   const L = ST.jug.slice().sort((a, b) => b.pts - a.pts), mx = Math.max(1, ...L.map(j => j.pts));
   el.innerHTML = L.map(j => `<div class="brow" style="--pc:${j.c}"><span>${esc(j.n)}</span><div class="bb"><i data-w="${j.pts / mx * 100}"></i></div><b>${j.pts}</b></div>`).join('');
@@ -1181,7 +1389,12 @@ function screenFinal(){
   (ST.hist || []).forEach((res, i) => { const x = res && res[0]; if (!x) return; const R = R_of(i + 1), p = player(x.id); const d = document.createElement('div'); d.className = 'pol'; d.appendChild(photoCanvas(R, x.t, 300, x.cam)); d.insertAdjacentHTML('beforeend', `<div class="cap">R${i + 1} · 📷 ${esc(p.n)}</div>`); A.appendChild(d); });
   SFX.fanfare(); setTimeout(() => { confetti(220); SFX.cheer(); }, 1300);
   $('bSaveBest').style.display = myBest() ? '' : 'none';
+  const mine = misFotos(), M = $('fnMine'); M.innerHTML = mine.length ? '' : '<p class="sub">No hiciste ninguna foto 🙈</p>';
+  mine.forEach((it, i) => { const c = photoCanvas(it.R, it.t, 150, it.cam); if (it.sel) c.className = 'pk'; c.onclick = () => verFoto(mine, i); M.appendChild(c); });
+  $('bSaveAll').style.display = mine.length ? '' : 'none';
+  $('bSaveAll').textContent = '💾 GUARDAR TODAS MIS FOTOS (' + mine.length + ')';
 }
+$('bSaveAll').onclick = () => guardarFotos(misFotos());
 function myBest(){
   let best = null;
   (ST.hist || []).forEach((res, i) => (res || []).forEach(x => { if (x.id === ST.yo && (!best || x.pts > best.x.pts)) best = { x, n: i + 1 }; }));
@@ -1189,19 +1402,7 @@ function myBest(){
 }
 async function saveBest(){
   const b = myBest(); if (!b) return;
-  SFX.click();
-  const R = R_of(b.n), ph = photoCanvas(R, b.x.t, 900, b.x.cam), q = quality(R, b.x.t / 1000, b.x.cam);
-  const c = document.createElement('canvas'); c.width = 1000; c.height = 1420;
-  const x = c.getContext('2d');
-  x.fillStyle = '#fffdf7'; x.fillRect(0, 0, c.width, c.height);
-  x.drawImage(ph, 50, 50, 900, 1200);
-  x.fillStyle = '#222'; x.textAlign = 'center'; x.font = '900 46px Rubik, sans-serif'; x.fillText(q.cap.replace(/[^\p{L}\p{N}\s¡!¿?.,]/gu, '').trim() || 'PAPARAZZI', 500, 1320);
-  x.font = '700 30px Rubik, sans-serif'; x.fillStyle = '#d62976'; x.fillText('📸 PAPARAZZI · foto de ' + player(ST.yo).n, 500, 1375);
-  c.toBlob(async blob => {
-    const file = new File([blob], 'paparazzi.png', { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })){ try{ await navigator.share({ files: [file], title: 'PAPARAZZI' }); return; }catch(e){} }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'paparazzi.png'; a.click();
-  }, 'image/png');
+  guardarFotos([{ R: R_of(b.n), t: b.x.t, cam: b.x.cam, tit: '📷 ' + player(ST.yo).n, pie: '📸 PAPARAZZI · foto de ' + player(ST.yo).n, nom: 'mejor' }]);
 }
 
 /* =========================================================

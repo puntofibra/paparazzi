@@ -9,7 +9,7 @@ const COLORES = ['#ff2d95', '#ffd60a', '#00e5ff', '#7cff4f', '#b388ff', '#ff8a3d
 const T_CUENTA = 5000;      // cuenta atrás antes de cada ronda
 const T_ELEGIR = 12000;     // margen para elegir y enviar la foto
 const T_SLOT = 7000;        // tiempo por foto en la pasarela de votos
-const T_RES = 11000;        // pantalla de resultados de la ronda
+// los resultados ya no tienen contador: se sigue cuando todos pulsan CONTINUAR (o el anfitrión fuerza)
 const T_OFF = 25000;        // sin noticias en 25 s = desconectado
 
 function doPost(e) {
@@ -128,7 +128,10 @@ function debeAvanzar_(st, now) {
     const v = st.votos[st.ronda] || {};
     return now > st.vEnd || (now > st.vStart + 3000 && act.every(id => v[id]));
   }
-  if (st.fase === 'resultado') return now > st.rEnd;
+  if (st.fase === 'resultado') {
+    const L = st.listo || [];
+    return !!st.forzar || (act.length > 0 && act.every(id => L.indexOf(id) >= 0));
+  }
   return false;
 }
 function avanzar_(st, now) {
@@ -161,7 +164,21 @@ function empezarRonda_(st, now) {
   st.fase = 'captura';
   st.t0 = now + T_CUENTA;
   st.tEnd = st.t0 + st.cfg.dur * 1000;
-  st.fotos[st.ronda] = {}; st.votos[st.ronda] = {};
+  // solo se guarda lo de la ronda actual (el historial va en hist y gal)
+  st.fotos = {}; st.votos = {}; st.tomas = {};
+  st.fotos[st.ronda] = {}; st.votos[st.ronda] = {}; st.tomas[st.ronda] = {};
+  st.listo = []; st.forzar = 0;
+}
+// cámara de una foto (validada)
+function camOk_(c) {
+  c = c || {}; const n = (v, a, b) => Math.max(a, Math.min(b, Number(v) || 0));
+  return { ax: Math.round(n(c.ax, 0, 1600)), ay: Math.round(n(c.ay, 0, 900)), zm: n(c.zm || 1.3, 1, 3.2), pf: n(c.pf, -1, 2), pe: n(c.pe, -1, 1), mx: Math.round(n(c.mx, -150, 150)), my: Math.round(n(c.my, -150, 150)) };
+}
+function guardaTomas_(st, me, d) {
+  const sh = (Array.isArray(d.sh) ? d.sh : []).slice(0, 3).map(x => ({ t: Math.round(Number(x && x.t) || 0), q: Math.max(0, Math.min(100, Math.round(Number(x && x.q) || 0))), cam: camOk_(x && x.cam) }))
+    .filter(x => x.t >= 0 && x.t <= st.cfg.dur * 1000 + 50);
+  st.tomas = st.tomas || {}; st.tomas[st.ronda] = st.tomas[st.ronda] || {};
+  if (sh.length) st.tomas[st.ronda][me.id] = sh;
 }
 function cerrarRonda_(st, now) {
   const fotos = st.fotos[st.ronda] || {}, votos = st.votos[st.ronda] || {};
@@ -183,8 +200,9 @@ function cerrarRonda_(st, now) {
   });
   res.sort((a, b) => b.pts - a.pts);
   st.hist[st.ronda - 1] = res;
+  st.gal = st.gal || []; st.gal[st.ronda - 1] = (st.tomas && st.tomas[st.ronda]) || {};
   st.fase = 'resultado';
-  st.rEnd = now + T_RES + Math.min(6, res.length) * 900;
+  st.listo = []; st.forzar = 0;
 }
 function finalizar_(st) {
   st.fase = 'final';
@@ -213,23 +231,28 @@ function acc_(d) {
   } else if (a === 'empezar' && me.id === st.host && (st.fase === 'lobby' || st.fase === 'final')) {
     if (st.fase === 'final') st.jug = activos_(st, now);
     st.jug.forEach(j => j.pts = 0);
-    st.ronda = 0; st.R = []; st.fotos = {}; st.votos = {}; st.hist = []; st.nof = {};
+    st.ronda = 0; st.R = []; st.fotos = {}; st.votos = {}; st.hist = []; st.nof = {}; st.gal = []; st.tomas = {};
     st.esc = (Array.isArray(d.esc) ? d.esc : []).map(Number).filter(x => x >= 0 && x < 200).slice(0, 20);
     empezarRonda_(st, now);
   } else if (a === 'lobby' && me.id === st.host && st.fase === 'final') {
     st.fase = 'lobby'; st.jug = activos_(st, now); st.jug.forEach(j => j.pts = 0);
   } else if (a === 'foto' && st.fase === 'captura' && Number(d.ronda) === st.ronda) {
     const t = Number(d.t);
-    const c = d.cam || {}, n = (v, a, b) => Math.max(a, Math.min(b, Number(v) || 0));
-    const cam = { dx: Math.round(n(c.dx, -700, 700)), dy: Math.round(n(c.dy, -300, 300)), zm: n(c.zm || 1, .6, 2), pf: n(c.pf, -1, 2), pe: n(c.pe, -1, 1) };
+    const cam = camOk_(d.cam);
+    guardaTomas_(st, me, d);
     if (t >= 0 && t <= st.cfg.dur * 1000 + 50) st.fotos[st.ronda][me.id] = { t: Math.round(t), q: Math.max(0, Math.min(100, Math.round(Number(d.q) || 0))), enc: !!d.enc, cam };
   } else if (a === 'nofoto' && st.fase === 'captura' && Number(d.ronda) === st.ronda) {
+    guardaTomas_(st, me, d);
     st.nof = st.nof || {}; st.nof[st.ronda] = st.nof[st.ronda] || []; if (st.nof[st.ronda].indexOf(me.id) < 0) st.nof[st.ronda].push(me.id);
   } else if (a === 'votos' && st.fase === 'voto' && Number(d.ronda) === st.ronda) {
     const e = {}, r = {};
     Object.keys(d.e || {}).forEach(k => { if (Number(k) !== me.id) { const x = parseInt(d.e[k], 10); if (x >= 1 && x <= 5) e[k] = x; } });
     Object.keys(d.r || {}).forEach(k => { if (Number(k) !== me.id) r[k] = String(d.r[k]).slice(0, 4); });
     st.votos[st.ronda][me.id] = { e, r };
+  } else if (a === 'listo' && st.fase === 'resultado' && Number(d.ronda) === st.ronda) {
+    st.listo = st.listo || []; if (st.listo.indexOf(me.id) < 0) st.listo.push(me.id);
+  } else if (a === 'forzar' && me.id === st.host && st.fase === 'resultado' && Number(d.ronda) === st.ronda) {
+    st.forzar = 1;
   } else if (a === 'salir') {
     st.jug = st.jug.filter(j => j.id !== me.id);
     if (st.host === me.id && st.jug[0]) st.host = st.jug[0].id;

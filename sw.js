@@ -1,5 +1,5 @@
 // Red primero y sin caché del navegador: siempre la última versión; la caché solo se usa sin conexión
-const CACHE = 'paparazzi-v1';
+const CACHE = 'paparazzi-v2';
 const FILES = ['./', 'index.html', 'manifest.json', 'icono-192.png'];
 self.addEventListener('install', e => {
   self.skipWaiting();
